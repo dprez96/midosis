@@ -1,21 +1,11 @@
 version: 2
+
+# Los ecosistemas de cada módulo se activan cuando ese módulo tenga su
+# manifiesto: Dependabot falla si apunta a una carpeta sin build.gradle.kts
+# o sin package.json. Se reactivan en S1 (core), S3 (farmacia) y S4 (paciente).
 updates:
-  - package-ecosystem: gradle
-    directory: /core
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
-  - package-ecosystem: gradle
-    directory: /paciente
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
-  - package-ecosystem: npm
-    directory: /farmacia
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: monthly
+    open-pull-requests-limit: 5
