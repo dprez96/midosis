@@ -1,0 +1,40 @@
+name: Defecto
+description: Algo que no funciona como debería
+labels: ["defecto"]
+body:
+  - type: textarea
+    id: observado
+    attributes:
+      label: Qué ocurre
+    validations:
+      required: true
+  - type: textarea
+    id: esperado
+    attributes:
+      label: Qué debería ocurrir
+    validations:
+      required: true
+  - type: textarea
+    id: reproduccion
+    attributes:
+      label: Cómo reproducirlo
+      value: |
+        1.
+        2.
+        3.
+  - type: dropdown
+    id: severidad
+    attributes:
+      label: Severidad
+      options:
+        - "S1 - impide dispensar o tomar el medicamento"
+        - "S2 - función principal degradada"
+        - "S3 - molestia con alternativa"
+        - "S4 - cosmético"
+    validations:
+      required: true
+  - type: input
+    id: ambiente
+    attributes:
+      label: Ambiente y dispositivo
+      placeholder: QA, Android 13, Xiaomi Redmi Note 12

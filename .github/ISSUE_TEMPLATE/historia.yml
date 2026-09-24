@@ -1,0 +1,52 @@
+name: Historia de usuario
+description: Una historia del backlog
+labels: ["historia"]
+body:
+  - type: textarea
+    id: narrativa
+    attributes:
+      label: Narrativa
+      value: |
+        Como <rol>
+        quiero <capacidad>
+        para <beneficio>
+    validations:
+      required: true
+  - type: textarea
+    id: criterios
+    attributes:
+      label: Criterios de aceptación
+      description: En formato Dado / Cuando / Entonces.
+      value: |
+        Dado que
+        Cuando
+        Entonces
+    validations:
+      required: true
+  - type: input
+    id: requerimientos
+    attributes:
+      label: Requerimientos asociados
+      placeholder: RF-M-09, RN-07
+  - type: dropdown
+    id: prioridad
+    attributes:
+      label: Prioridad MoSCoW
+      options: ["Must", "Should", "Could", "Won't"]
+    validations:
+      required: true
+  - type: dropdown
+    id: puntos
+    attributes:
+      label: Puntos de historia
+      options: ["1", "2", "3", "5", "8", "13"]
+    validations:
+      required: true
+  - type: dropdown
+    id: datos
+    attributes:
+      label: ¿Trata datos personales?
+      description: Si la respuesta es sí, la historia necesita clasificación de impacto antes de entrar a desarrollo.
+      options: ["No", "Sí"]
+    validations:
+      required: true

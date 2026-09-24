@@ -1,0 +1,13 @@
+# Revision obligatoria por area.
+# El codigo criptografico y el motor de planificacion exigen dos revisores;
+# esa regla se configura ademas en la proteccion de la rama principal.
+
+*                           @PENDIENTE-USUARIO
+
+/contrato/                  @PENDIENTE-CRIPTO @PENDIENTE-ARQUITECTURA
+/core/**/cripto/            @PENDIENTE-CRIPTO @PENDIENTE-ARQUITECTURA
+/core/**/planificacion/     @PENDIENTE-MOTOR  @PENDIENTE-ARQUITECTURA
+/paciente/                  @PENDIENTE-MOVIL
+/farmacia/                  @PENDIENTE-WEB
+/infra/                     @PENDIENTE-ARQUITECTURA
+/docs/adr/                  @PENDIENTE-ARQUITECTURA

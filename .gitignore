@@ -1,0 +1,54 @@
+# Compilación
+build/
+out/
+dist/
+target/
+*.class
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+
+# Gradle
+.gradle/
+gradle-app.setting
+
+# Android
+*.apk
+*.aab
+*.ap_
+*.dex
+local.properties
+.cxx/
+captures/
+
+# Node
+node_modules/
+.next/
+coverage/
+*.tsbuildinfo
+
+# Entornos y secretos: nunca versionados
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.jks
+*.keystore
+service-account*.json
+credenciales*.json
+
+# Estado de Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# Editores
+.idea/
+.vscode/
+*.iml
+*.swp
+
+# Sistema
+.DS_Store
+Thumbs.db
+desktop.ini

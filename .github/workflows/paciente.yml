@@ -1,0 +1,42 @@
+name: paciente
+
+on:
+  push:
+    branches: [main]
+    paths: ["paciente/**", "contrato/**", ".github/workflows/paciente.yml"]
+  pull_request:
+    paths: ["paciente/**", "contrato/**", ".github/workflows/paciente.yml"]
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: paciente
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Comprobar que el módulo ya tiene código
+        id: existe
+        run: |
+          if [ -f gradlew ]; then echo "listo=si" >> $GITHUB_OUTPUT
+          else echo "listo=no" >> $GITHUB_OUTPUT; echo "Módulo aún sin código; nada que compilar."; fi
+
+      - name: Pruebas unitarias
+        if: steps.existe.outputs.listo == 'si'
+        run: ./gradlew testDebugUnitTest --no-daemon
+
+      - name: Análisis de Android
+        if: steps.existe.outputs.listo == 'si'
+        run: ./gradlew lintDebug --no-daemon
+
+      - name: Compilar APK de depuración
+        if: steps.existe.outputs.listo == 'si'
+        run: ./gradlew assembleDebug --no-daemon

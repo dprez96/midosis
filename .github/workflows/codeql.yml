@@ -1,0 +1,35 @@
+name: análisis estático
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"
+
+jobs:
+  analizar:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        lenguaje: ["java-kotlin", "javascript-typescript"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.lenguaje }}
+          queries: security-extended
+
+      - uses: github/codeql-action/autobuild@v3
+        continue-on-error: true
+
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: "/lenguaje:${{ matrix.lenguaje }}"

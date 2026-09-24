@@ -1,0 +1,61 @@
+name: core
+
+on:
+  push:
+    branches: [main]
+    paths: ["core/**", "contrato/**", ".github/workflows/core.yml"]
+  pull_request:
+    paths: ["core/**", "contrato/**", ".github/workflows/core.yml"]
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: core
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: pruebas
+          POSTGRES_DB: midosis_qa
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
+        ports: ["5432:5432"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Comprobar que el módulo ya tiene código
+        id: existe
+        run: |
+          if [ -f gradlew ]; then echo "listo=si" >> $GITHUB_OUTPUT
+          else echo "listo=no" >> $GITHUB_OUTPUT; echo "Módulo aún sin código; nada que compilar."; fi
+
+      - name: Compilar y probar
+        if: steps.existe.outputs.listo == 'si'
+        run: ./gradlew build --no-daemon
+        env:
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/midosis_qa
+          SPRING_DATASOURCE_USERNAME: postgres
+          SPRING_DATASOURCE_PASSWORD: pruebas
+
+      - name: Aislamiento entre comunas
+        if: steps.existe.outputs.listo == 'si'
+        run: ./gradlew test --tests "*Aislamiento*" --no-daemon
+
+      - name: Publicar cobertura
+        if: steps.existe.outputs.listo == 'si'
+        uses: actions/upload-artifact@v4
+        with:
+          name: cobertura-core
+          path: core/build/reports/jacoco/
+          if-no-files-found: ignore

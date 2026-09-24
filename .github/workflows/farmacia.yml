@@ -1,0 +1,46 @@
+name: farmacia
+
+on:
+  push:
+    branches: [main]
+    paths: ["farmacia/**", "contrato/**", ".github/workflows/farmacia.yml"]
+  pull_request:
+    paths: ["farmacia/**", "contrato/**", ".github/workflows/farmacia.yml"]
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: farmacia
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: farmacia/package-lock.json
+
+      - name: Comprobar que el módulo ya tiene código
+        id: existe
+        run: |
+          if [ -f package.json ]; then echo "listo=si" >> $GITHUB_OUTPUT
+          else echo "listo=no" >> $GITHUB_OUTPUT; echo "Módulo aún sin código; nada que compilar."; fi
+
+      - name: Instalar dependencias
+        if: steps.existe.outputs.listo == 'si'
+        run: npm ci
+
+      - name: Estilo y tipos
+        if: steps.existe.outputs.listo == 'si'
+        run: npm run lint
+
+      - name: Pruebas
+        if: steps.existe.outputs.listo == 'si'
+        run: npm test
+
+      - name: Construir
+        if: steps.existe.outputs.listo == 'si'
+        run: npm run build
