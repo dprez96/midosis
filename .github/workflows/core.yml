@@ -55,9 +55,23 @@ jobs:
           SPRING_DATASOURCE_USERNAME: postgres
           SPRING_DATASOURCE_PASSWORD: pruebas
 
+      # Condicion de la Definicion de Terminado que protege el ADR-011. Mientras
+      # core no acceda a datos no hay nada que aislar; en cuanto aparece codigo de
+      # persistencia, la bateria de aislamiento pasa a ser obligatoria y su
+      # ausencia hace fallar la verificacion.
       - name: Aislamiento entre comunas
         if: steps.existe.outputs.listo == 'si'
-        run: ./gradlew test --tests "*Aislamiento*" --no-daemon
+        run: |
+          PERSISTENCIA=$(grep -rlE '@Entity|@Table|JpaRepository|CrudRepository|JdbcTemplate|JdbcClient|DataSource' src/main 2>/dev/null | head -1 || true)
+          PRUEBAS=$(find src/test -name '*Aislamiento*' 2>/dev/null | head -1)
+          if [ -n "$PRUEBAS" ]; then
+            ./gradlew test --tests "*Aislamiento*" --no-daemon
+          elif [ -n "$PERSISTENCIA" ]; then
+            echo "::error::core accede a datos ($PERSISTENCIA) pero no tiene pruebas de aislamiento entre comunas (HU-28)."
+            exit 1
+          else
+            echo "::warning::core aun no accede a datos; la bateria de aislamiento sera obligatoria en cuanto lo haga (HU-28)."
+          fi
 
       - name: Publicar cobertura
         if: steps.existe.outputs.listo == 'si'
