@@ -17,7 +17,7 @@ jobs:
       lenguajes: ${{ steps.d.outputs.lenguajes }}
       hay: ${{ steps.d.outputs.hay }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - id: d
         run: |
@@ -51,7 +51,7 @@ jobs:
         lenguaje: ${{ fromJSON(needs.detectar.outputs.lenguajes) }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: github/codeql-action/init@v3
         with:

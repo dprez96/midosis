@@ -15,7 +15,7 @@ jobs:
         working-directory: paciente
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Comprobar que el módulo ya tiene código
         id: existe

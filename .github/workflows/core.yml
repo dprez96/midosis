@@ -26,7 +26,7 @@ jobs:
         ports: ["5432:5432"]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # La comprobación va antes de preparar el entorno: la caché de Gradle
       # falla si el módulo todavía no tiene manifiestos que resumir.
