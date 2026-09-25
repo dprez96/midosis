@@ -41,9 +41,12 @@ jobs:
     needs: detectar
     if: needs.detectar.outputs.hay == 'si'
     runs-on: ubuntu-latest
+    # En repositorios privados CodeQL necesita leer la ejecucion del flujo
+    # para subir resultados; sin actions: read falla despues de analizar.
     permissions:
       security-events: write
       contents: read
+      actions: read
 
     strategy:
       fail-fast: false

@@ -34,6 +34,8 @@ jobs:
         id: existe
         run: |
           if [ -f gradlew ]; then
+            # Quien commitea desde Windows no registra el permiso de ejecucion.
+            chmod +x gradlew
             echo "listo=si" >> $GITHUB_OUTPUT
           else
             echo "listo=no" >> $GITHUB_OUTPUT
