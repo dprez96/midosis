@@ -1,11 +1,13 @@
 name: análisis estático
 
+# Solo ejecucion manual. GitHub no publica resultados de CodeQL en
+# repositorios privados sin GitHub Code Security (de pago): el analisis corre,
+# pero falla al subirlos con "Code scanning is not enabled for this repository".
+# Un check que nunca puede pasar ensena a ignorar el rojo, asi que queda fuera
+# de los pull requests hasta decidir la alternativa. Si el repositorio pasa a
+# ser publico, basta con restaurar los disparadores push, pull_request y schedule.
 on:
-  push:
-    branches: [main]
-  pull_request:
-  schedule:
-    - cron: "0 6 * * 1"
+  workflow_dispatch:
 
 jobs:
   # CodeQL falla si se le pide analizar un lenguaje del que no hay una sola
