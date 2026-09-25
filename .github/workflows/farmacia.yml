@@ -15,7 +15,7 @@ jobs:
         working-directory: farmacia
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Igual que en los módulos de Gradle: la caché de npm falla si todavía
       # no existe el archivo de bloqueo que resume.
