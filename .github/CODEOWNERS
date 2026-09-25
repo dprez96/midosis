@@ -21,6 +21,7 @@
 /core/                        @sebvvs
 /farmacia/                    @YNWbenja
 /paciente/                    @WladimirPro
+/motor/                       @sebvvs @WladimirPro
 
 /contrato/                    @dprez96 @sebvvs
 /infra/                       @dprez96 @sebvvs
@@ -29,6 +30,4 @@
 /SECURITY.md                  @dprez96 @sebvvs
 
 /core/**/cripto/              @dprez96 @sebvvs
-/core/**/planificacion/       @sebvvs @dprez96
 /paciente/**/cripto/          @dprez96 @WladimirPro
-/paciente/**/planificacion/   @sebvvs @WladimirPro

@@ -11,7 +11,8 @@ y se verifica sin conexión, y no contiene ningún dato que identifique al pacie
 
 | Carpeta | Qué es | Tecnología |
 |---|---|---|
-| `core/` | Servicios centrales, motor de reglas, emisión y canje | Kotlin, Spring Boot |
+| `core/` | Servicios centrales, emisión y canje | Kotlin, Spring Boot |
+| `motor/` | Motor de planificación y reglas posológicas, compartido por `core/` y `paciente/` | Kotlin |
 | `farmacia/` | Aplicación web del punto de dispensación | TypeScript, React |
 | `paciente/` | Aplicación móvil | Kotlin, Android 9+ |
 | `contrato/` | Esquema de la credencial y vectores de prueba | CBOR, COSE, Base45 |

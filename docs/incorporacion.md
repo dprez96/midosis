@@ -47,7 +47,7 @@ Cada una se instala con `winget install <identificador>`.
 
 | Frente | Carpeta | Qué instalar |
 |---|---|---|
-| Backend | `core/` | `EclipseAdoptium.Temurin.21.JDK`, `JetBrains.IntelliJIDEA.Community`, `Docker.DockerDesktop` |
+| Backend | `core/`, `motor/` | `EclipseAdoptium.Temurin.21.JDK`, `JetBrains.IntelliJIDEA.Community`, `Docker.DockerDesktop` |
 | Web | `farmacia/` | `OpenJS.NodeJS.22`, `Microsoft.VisualStudioCode` |
 | Móvil | `paciente/` | `Google.AndroidStudio`, que trae su propio JDK y el SDK de Android |
 | Arquitectura y seguridad | `contrato/`, `infra/` | `EclipseAdoptium.Temurin.21.JDK`, `JetBrains.IntelliJIDEA.Community`, `Docker.DockerDesktop` |

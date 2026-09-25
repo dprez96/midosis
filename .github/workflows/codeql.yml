@@ -23,7 +23,7 @@ jobs:
       - id: d
         run: |
           LENG=()
-          if find core paciente contrato -type f \( -name '*.kt' -o -name '*.java' \) -print -quit 2>/dev/null | grep -q .; then
+          if find core motor paciente contrato -type f \( -name '*.kt' -o -name '*.java' \) -print -quit 2>/dev/null | grep -q .; then
             LENG+=('"java-kotlin"')
           fi
           if find farmacia contrato -type f \( -name '*.ts' -o -name '*.tsx' -o -name '*.js' \) -print -quit 2>/dev/null | grep -q .; then
@@ -57,13 +57,38 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Kotlin se analiza observando la compilacion, asi que hay que compilar.
+      # TypeScript se analiza leyendo el codigo, sin construir nada.
       - uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.lenguaje }}
           queries: security-extended
+          build-mode: ${{ matrix.lenguaje == 'java-kotlin' && 'manual' || 'none' }}
 
-      - uses: github/codeql-action/autobuild@v3
-        continue-on-error: true
+      - uses: actions/setup-java@v6
+        if: matrix.lenguaje == 'java-kotlin'
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      # El autobuild de CodeQL no sabe elegir cuando hay mas de un proyecto
+      # Gradle ("Cannot auto-detect a single build directory"). Se compila cada
+      # modulo que exista, sin cache, para que CodeQL vea toda la compilacion.
+      - name: Compilar los módulos Kotlin
+        if: matrix.lenguaje == 'java-kotlin'
+        run: |
+          for m in motor core paciente; do
+            [ -f "$m/gradlew" ] || continue
+            chmod +x "$m/gradlew"
+            if grep -qs "com.android" "$m/build.gradle.kts" "$m/app/build.gradle.kts"; then
+              tarea=assembleDebug
+            else
+              tarea=testClasses
+            fi
+            echo "::group::$m ($tarea)"
+            (cd "$m" && ./gradlew --no-daemon --no-build-cache -Pkotlin.compiler.execution.strategy=in-process clean $tarea)
+            echo "::endgroup::"
+          done
 
       - uses: github/codeql-action/analyze@v3
         with:

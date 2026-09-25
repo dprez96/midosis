@@ -1,20 +1,20 @@
-name: paciente
+name: motor
 
 on:
   push:
     branches: [main]
-    paths: ["paciente/**", "motor/**", "contrato/**", ".github/workflows/paciente.yml"]
+    paths: ["motor/**", ".github/workflows/motor.yml"]
   # En los pull requests corre siempre, aunque el cambio no toque este modulo:
   # es un check obligatorio de main, y un check obligatorio que no se ejecuta
   # deja el pull request bloqueado. Sin cambios en el modulo termina en segundos.
   pull_request:
 
 jobs:
-  paciente:
+  motor:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: paciente
+        working-directory: motor
 
     steps:
       - uses: actions/checkout@v7
@@ -38,14 +38,14 @@ jobs:
           java-version: "21"
           cache: gradle
 
-      - name: Pruebas unitarias
+      - name: Compilar y probar
         if: steps.existe.outputs.listo == 'si'
-        run: ./gradlew testDebugUnitTest --no-daemon
+        run: ./gradlew build --no-daemon
 
-      - name: Análisis de Android
+      - name: Publicar cobertura
         if: steps.existe.outputs.listo == 'si'
-        run: ./gradlew lintDebug --no-daemon
-
-      - name: Compilar APK de depuración
-        if: steps.existe.outputs.listo == 'si'
-        run: ./gradlew assembleDebug --no-daemon
+        uses: actions/upload-artifact@v7
+        with:
+          name: cobertura-motor
+          path: motor/build/reports/jacoco/
+          if-no-files-found: ignore
