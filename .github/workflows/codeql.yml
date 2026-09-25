@@ -23,7 +23,7 @@ jobs:
       - id: d
         run: |
           LENG=()
-          if find core paciente contrato -type f \( -name '*.kt' -o -name '*.java' \) -print -quit 2>/dev/null | grep -q .; then
+          if find core motor paciente contrato -type f \( -name '*.kt' -o -name '*.java' \) -print -quit 2>/dev/null | grep -q .; then
             LENG+=('"java-kotlin"')
           fi
           if find farmacia contrato -type f \( -name '*.ts' -o -name '*.tsx' -o -name '*.js' \) -print -quit 2>/dev/null | grep -q .; then
