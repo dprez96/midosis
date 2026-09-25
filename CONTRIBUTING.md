@@ -1,5 +1,8 @@
 # Cómo trabajamos
 
+Si es tu primera vez en el proyecto, parte por la [guía de incorporación](docs/incorporacion.md).
+Este documento fija las convenciones; aquella explica cómo preparar tu equipo.
+
 ## Ramas
 
 Ramas de vida corta sobre `main`. Nada se fusiona sin revisión ni con la integración

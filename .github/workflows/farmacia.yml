@@ -17,17 +17,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Igual que en los módulos de Gradle: la caché de npm falla si todavía
+      # no existe el archivo de bloqueo que resume.
+      - name: Comprobar que el módulo ya tiene código
+        id: existe
+        run: |
+          if [ -f package.json ]; then
+            echo "listo=si" >> $GITHUB_OUTPUT
+          else
+            echo "listo=no" >> $GITHUB_OUTPUT
+            echo "Módulo aún sin código; nada que compilar."
+          fi
+
       - uses: actions/setup-node@v4
+        if: steps.existe.outputs.listo == 'si'
         with:
           node-version: "22"
           cache: npm
           cache-dependency-path: farmacia/package-lock.json
-
-      - name: Comprobar que el módulo ya tiene código
-        id: existe
-        run: |
-          if [ -f package.json ]; then echo "listo=si" >> $GITHUB_OUTPUT
-          else echo "listo=no" >> $GITHUB_OUTPUT; echo "Módulo aún sin código; nada que compilar."; fi
 
       - name: Instalar dependencias
         if: steps.existe.outputs.listo == 'si'
