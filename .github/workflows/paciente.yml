@@ -4,11 +4,13 @@ on:
   push:
     branches: [main]
     paths: ["paciente/**", "contrato/**", ".github/workflows/paciente.yml"]
+  # En los pull requests corre siempre, aunque el cambio no toque este modulo:
+  # es un check obligatorio de main, y un check obligatorio que no se ejecuta
+  # deja el pull request bloqueado. Sin cambios en el modulo termina en segundos.
   pull_request:
-    paths: ["paciente/**", "contrato/**", ".github/workflows/paciente.yml"]
 
 jobs:
-  verificar:
+  paciente:
     runs-on: ubuntu-latest
     defaults:
       run:
