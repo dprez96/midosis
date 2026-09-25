@@ -5,7 +5,7 @@ dist/
 target/
 *.class
 *.jar
-!gradle/wrapper/gradle-wrapper.jar
+!**/gradle/wrapper/gradle-wrapper.jar
 
 # Gradle
 .gradle/

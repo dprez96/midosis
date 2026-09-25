@@ -6,6 +6,7 @@ on:
   pull_request:
   schedule:
     - cron: "0 6 * * 1"
+  workflow_dispatch:
 
 jobs:
   # CodeQL falla si se le pide analizar un lenguaje del que no hay una sola
@@ -41,9 +42,12 @@ jobs:
     needs: detectar
     if: needs.detectar.outputs.hay == 'si'
     runs-on: ubuntu-latest
+    # En repositorios privados CodeQL necesita leer la ejecucion del flujo
+    # para subir resultados; sin actions: read falla despues de analizar.
     permissions:
       security-events: write
       contents: read
+      actions: read
 
     strategy:
       fail-fast: false

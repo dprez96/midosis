@@ -1,13 +1,34 @@
-# Revision obligatoria por area.
-# El codigo criptografico y el motor de planificacion exigen dos revisores;
-# esa regla se configura ademas en la proteccion de la rama principal.
+# Dueños de código por frente de trabajo. GitHub pide revisión automáticamente
+# a los dueños de cada archivo que cambia un pull request.
+#
+#   Arquitectura, seguridad y cumplimiento   Daniel      @dprez96
+#   Motor de planificación y servicios       Sebastián   @sebvvs
+#   Aplicación web                           Benjamín    @YNWbenja
+#   Aplicación móvil                         Wladimir    @WladimirPro
+#
+# Nadie puede aprobar su propio pull request. Por eso toda área técnica tiene al
+# menos un dueño distinto de quien suele abrir los cambios, y la protección de
+# main no exige la aprobación específica del dueño: exige una aprobación.
+#
+# El código criptográfico y el motor de planificación listan dos dueños, y
+# GitHub pide revisión a ambos. Que los dos aprueben es un acuerdo del equipo;
+# la protección de main solo obliga a una aprobación.
+#
+# Las reglas posteriores prevalecen sobre las anteriores.
 
-*                           @PENDIENTE-USUARIO
+*                             @dprez96
 
-/contrato/                  @PENDIENTE-CRIPTO @PENDIENTE-ARQUITECTURA
-/core/**/cripto/            @PENDIENTE-CRIPTO @PENDIENTE-ARQUITECTURA
-/core/**/planificacion/     @PENDIENTE-MOTOR  @PENDIENTE-ARQUITECTURA
-/paciente/                  @PENDIENTE-MOVIL
-/farmacia/                  @PENDIENTE-WEB
-/infra/                     @PENDIENTE-ARQUITECTURA
-/docs/adr/                  @PENDIENTE-ARQUITECTURA
+/core/                        @sebvvs
+/farmacia/                    @YNWbenja
+/paciente/                    @WladimirPro
+
+/contrato/                    @dprez96 @sebvvs
+/infra/                       @dprez96 @sebvvs
+/.github/                     @dprez96 @sebvvs
+/docs/adr/                    @dprez96 @sebvvs
+/SECURITY.md                  @dprez96 @sebvvs
+
+/core/**/cripto/              @dprez96 @sebvvs
+/core/**/planificacion/       @sebvvs @dprez96
+/paciente/**/cripto/          @dprez96 @WladimirPro
+/paciente/**/planificacion/   @sebvvs @WladimirPro
