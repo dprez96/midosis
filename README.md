@@ -27,6 +27,9 @@ de formato rompe la compilación de los tres y no pasa inadvertido.
 
 ## Puesta en marcha
 
+**¿Recién llegas al proyecto?** Empieza por la [guía de incorporación](docs/incorporacion.md):
+qué instalar según tu frente, cómo se trabaja cada historia y qué hacer si algo falla.
+
 Requisitos: JDK 21, Node 22, Android Studio y Docker para la base de datos local.
 
 ```bash
