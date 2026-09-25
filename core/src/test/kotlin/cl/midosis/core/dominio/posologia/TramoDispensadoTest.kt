@@ -48,6 +48,15 @@ class TramoDispensadoTest {
         assertEquals(LocalDate.of(2026, 10, 31), losartan.seAgotaEl(retiro))
     }
 
+    /**
+     * Regla clinica confirmada por el quimico farmaceutico asesor. Si esta prueba
+     * falla, alguien cambio la anticipacion: hace falta su visto bueno de nuevo.
+     */
+    @Test
+    fun `el aviso de proximo retiro se da cinco dias antes del agotamiento`() {
+        assertEquals(5, TramoDispensado.ANTICIPACION_AVISO_DIAS)
+    }
+
     @Test
     fun `avisa del proximo retiro con anticipacion`() {
         val retiro = LocalDate.of(2026, 10, 1)

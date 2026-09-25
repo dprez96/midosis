@@ -60,9 +60,22 @@ data class TramoDispensado(
      * Cuando avisar del proximo retiro: con la anticipacion indicada respecto del
      * agotamiento, y nunca antes del dia del retiro.
      */
-    fun avisoDeProximoRetiro(fechaRetiro: LocalDate, anticipacionDias: Long = 5): LocalDate? {
+    fun avisoDeProximoRetiro(
+        fechaRetiro: LocalDate,
+        anticipacionDias: Long = ANTICIPACION_AVISO_DIAS,
+    ): LocalDate? {
         if (completaLoIndicado) return null
         val aviso = seAgotaEl(fechaRetiro).minusDays(anticipacionDias)
         return if (aviso.isBefore(fechaRetiro)) fechaRetiro else aviso
+    }
+
+    companion object {
+        /**
+         * Dias de anticipacion con que se avisa del proximo retiro antes de que se
+         * agote lo entregado (RN-07). Valor confirmado por el quimico farmaceutico
+         * asesor: deja margen para acudir a la farmacia sin interrumpir las tomas.
+         * Es una regla clinica; no se cambia sin su visto bueno.
+         */
+        const val ANTICIPACION_AVISO_DIAS: Long = 5
     }
 }
