@@ -1,4 +1,4 @@
-package cl.midosis.core.dominio.posologia
+package cl.midosis.motor.posologia
 
 import java.time.Duration
 import kotlin.test.Test
