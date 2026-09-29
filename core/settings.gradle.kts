@@ -7,3 +7,7 @@ plugins {
 }
 
 rootProject.name = "core"
+
+// El motor de reglas se compila desde su codigo fuente, sin publicarlo: core y
+// paciente usan siempre la misma version que esta en el repositorio.
+includeBuild("../motor")
