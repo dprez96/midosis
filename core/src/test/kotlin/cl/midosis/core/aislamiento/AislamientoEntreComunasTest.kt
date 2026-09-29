@@ -14,6 +14,7 @@ import org.springframework.dao.DataAccessException
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
+import org.springframework.test.web.servlet.post
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -208,6 +209,22 @@ class AislamientoEntreComunasTest : PruebaIntegracion() {
     @Test
     fun `sin token no hay acceso`() {
         mvc.get("/api/catalogo/productos").andExpect { status { isUnauthorized() } }
+    }
+
+    @Test
+    fun `una peticion con token Bearer no queda bloqueada por la proteccion CSRF`() {
+        // El catálogo no acepta POST: si CSRF la bloqueara la respuesta sería 403, y
+        // llegar a 405 prueba que la petición pasó.
+        mvc.post("/api/catalogo/productos") {
+            header("Authorization", "Bearer ${token(providencia.valor)}")
+        }.andExpect { status { isMethodNotAllowed() } }
+    }
+
+    @Test
+    fun `una peticion sin token Bearer sigue protegida por CSRF`() {
+        // Con CSRF activo, el filtro la rechaza con 403 antes de pedir autenticación. Si
+        // alguien lo deshabilitara, la respuesta pasaría a ser 401 y esta prueba fallaría.
+        mvc.post("/api/catalogo/productos").andExpect { status { isForbidden() } }
     }
 
     // ------------------------------------------------------------ utilidades

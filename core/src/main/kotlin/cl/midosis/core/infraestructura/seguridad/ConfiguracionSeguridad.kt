@@ -9,8 +9,13 @@ import org.springframework.security.oauth2.server.resource.web.authentication.Be
 import org.springframework.security.web.SecurityFilterChain
 
 /**
- * API sin sesión: cada petición trae su token Bearer firmado. Por eso no hay protección
- * CSRF, que solo tiene sentido cuando el navegador envía credenciales por su cuenta.
+ * API sin sesión: cada petición trae su token Bearer firmado.
+ *
+ * La protección CSRF queda activa, con su configuración por defecto. El servidor de
+ * recursos de Spring ya la omite en las peticiones con token Bearer: el ataque CSRF
+ * aprovecha credenciales que el navegador envía solo, como las cookies, y un token en la
+ * cabecera Authorization solo lo pone quien lo tiene. No se deshabilita del todo, para
+ * que un acceso por cookies que se agregue mañana nazca protegido.
  */
 @Configuration
 class ConfiguracionSeguridad {
@@ -24,7 +29,6 @@ class ConfiguracionSeguridad {
             }
             .oauth2ResourceServer { it.jwt(Customizer.withDefaults()) }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
-            .csrf { it.disable() }
             // El filtro se crea aquí y no como componente: Spring Boot registraría un
             // componente también como filtro del servidor, y correría dos veces.
             .addFilterAfter(FiltroManipulacionComuna(registro), BearerTokenAuthenticationFilter::class.java)
