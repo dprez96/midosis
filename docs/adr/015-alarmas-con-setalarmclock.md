@@ -1,6 +1,6 @@
 # ADR-015. Las alarmas de toma se programan con setAlarmClock
 
-**Estado:** propuesta, en revisión con la HU-15
+**Estado:** aceptada
 
 ## Contexto
 
@@ -45,5 +45,5 @@ disparos de la aplicación guarda el desfase de cada alarma.
 
 ---
 
-Se aparta del informe, que menciona `setExactAndAllowWhileIdle`. Si se acepta, el informe
-debe actualizarse.
+Se aparta del informe, que menciona `setExactAndAllowWhileIdle`. Al aceptarse, el informe
+se actualiza para indicar `setAlarmClock`.
