@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Sin permiso de Internet, a propósito: el sistema operativo le impide a la aplicación
+  usar la red. Que las alarmas funcionen sin conexión (HU-15) no depende de una promesa
+  del código. Cuando llegue la sincronización, este permiso se agrega con su revisión.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Android 13+: mostrar la notificación de la toma. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Android 12+: alarmas exactas. Desde Android 14 lo concede el paciente en Ajustes. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <application
+        android:name=".AplicacionMiDosis"
+        android:allowBackup="false"
+        android:label="@string/nombre_app"
+        android:supportsRtl="true"
+        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+
+        <activity
+            android:name=".ui.PantallaPrincipal"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <receiver
+            android:name=".alarmas.ReceptorDeAlarma"
+            android:exported="false" />
+    </application>
+</manifest>
