@@ -1,4 +1,4 @@
-package cl.midosis.paciente.seguridad
+package cl.midosis.paciente.cripto
 
 import javax.crypto.AEADBadTagException
 import javax.crypto.KeyGenerator

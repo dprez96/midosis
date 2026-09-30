@@ -2,8 +2,8 @@ package cl.midosis.paciente.alarmas
 
 import android.content.Context
 import android.util.Log
-import cl.midosis.paciente.seguridad.Cifrador
-import cl.midosis.paciente.seguridad.ClaveDelDispositivo
+import cl.midosis.paciente.cripto.Cifrador
+import cl.midosis.paciente.cripto.ClaveDelDispositivo
 import java.io.File
 import java.time.LocalDateTime
 

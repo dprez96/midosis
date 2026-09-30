@@ -1,4 +1,4 @@
-package cl.midosis.paciente.seguridad
+package cl.midosis.paciente.cripto
 
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
