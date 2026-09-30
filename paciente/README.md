@@ -31,6 +31,14 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 Requiere el SDK de Android con la plataforma 37 (`ANDROID_HOME` definido) y un teléfono con
 la depuración USB activa.
 
+Lo que depende del almacén de claves de Android solo se puede probar en el teléfono:
+
+```bash
+./gradlew connectedDebugAndroidTest
+```
+
+Ojo: al terminar, **desinstala la aplicación** del teléfono, con sus permisos y sus datos.
+
 ## Alarmas
 
 Se programan con `AlarmManager.setAlarmClock` (ADR-015). Desde Android 14, el permiso de

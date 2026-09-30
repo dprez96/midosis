@@ -1,6 +1,5 @@
 package cl.midosis.paciente.cripto
 
-import java.security.SecureRandom
 import javax.crypto.Cipher
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
@@ -11,6 +10,10 @@ import javax.crypto.spec.GCMParameterSpec
  * cada cifrado. Si alguien altera un solo byte, descifrar falla en vez de devolver datos
  * corruptos.
  *
+ * El vector lo genera el propio cifrador, nunca la aplicación: el almacén de claves de
+ * Android lo exige ("Caller-provided IV not permitted") para que ningún error de
+ * programación pueda repetir un vector con la misma clave, que en GCM es catastrófico.
+ *
  * La clave se recibe desde afuera: en el teléfono viene del almacén de claves de Android;
  * en las pruebas, de un generador en memoria.
  */
@@ -18,8 +21,9 @@ class Cifrador(private val clave: () -> SecretKey) {
 
     fun cifrar(datos: ByteArray): ByteArray {
         val cifra = Cipher.getInstance(TRANSFORMACION)
-        val iv = ByteArray(LARGO_IV).also { SecureRandom().nextBytes(it) }
-        cifra.init(Cipher.ENCRYPT_MODE, clave(), GCMParameterSpec(BITS_ETIQUETA, iv))
+        cifra.init(Cipher.ENCRYPT_MODE, clave())
+        val iv = cifra.iv
+        check(iv != null && iv.size == LARGO_IV) { "el cifrador no generó un vector de ${LARGO_IV} bytes" }
         return iv + cifra.doFinal(datos)
     }
 
