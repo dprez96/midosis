@@ -16,12 +16,15 @@ spring:
     placeholders:
       rolAplicacion: midosis_app
 
-  # Tokens emitidos por Firebase Authentication. La comuna viaja en el claim «comuna».
+  # Tokens emitidos por Firebase Authentication. La comuna viaja en el claim «comuna» y
+  # el rol en «rol»; los asigna infra/firebase/asignar-perfil.mjs. Se verifican el emisor
+  # y la audiencia: los dos deben ser el proyecto de Firebase de MiDosis.
   security:
     oauth2:
       resourceserver:
         jwt:
           issuer-uri: ${MIDOSIS_JWT_ISSUER:https://securetoken.google.com/midosis-desarrollo}
+          audiences: ${MIDOSIS_JWT_AUDIENCIA:midosis-desarrollo}
 
 management:
   endpoints:

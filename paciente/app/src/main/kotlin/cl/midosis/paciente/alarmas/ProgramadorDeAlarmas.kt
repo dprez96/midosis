@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import cl.midosis.paciente.ui.PantallaPrincipal
+import java.time.LocalDateTime
 import java.time.ZoneId
 
 /**
@@ -16,12 +17,12 @@ import java.time.ZoneId
  * toma cercana a otra, lo que rompe el margen de 5 minutos del criterio de la HU-15. Las de
  * setAlarmClock son las de un despertador: el sistema sale del ahorro para cumplirlas.
  */
-class ProgramadorDeAlarmas(private val contexto: Context) {
+class ProgramadorDeAlarmas(
+    private val contexto: Context,
+    private val almacen: AlmacenDelPlan = AlmacenDelPlan(contexto),
+) {
 
     private val alarmas = contexto.getSystemService(AlarmManager::class.java)
-
-    /** Identificadores de las alarmas vigentes, para poder cancelarlas después. */
-    private val vigentes = contexto.getSharedPreferences("alarmas", Context.MODE_PRIVATE)
 
     /**
      * Desde Android 12 hace falta permiso para alarmas exactas, y desde Android 14 lo
@@ -34,39 +35,48 @@ class ProgramadorDeAlarmas(private val contexto: Context) {
      * Programa las alarmas del plan. Devuelve cuántas quedaron programadas: cero si falta
      * el permiso, para que quien llama lo muestre en vez de fallar en silencio (HU-24).
      */
-    fun programar(plan: List<SolicitudDeAlarma>): Int {
-        if (!puedeProgramarExactas()) return 0
-        var programadas = 0
+    fun programar(plan: List<SolicitudDeAlarma>, ahora: LocalDateTime = LocalDateTime.now()): Int {
+        val programadas = entregar(plan)
+        // Se guarda lo que de verdad quedó programado, para reprogramarlo tras un reinicio.
+        almacen.agregar(programadas, ahora)
+        return programadas.size
+    }
+
+    /**
+     * Vuelve a entregar al sistema las alarmas guardadas que todavía no pasan (HU-17).
+     * Se llama al encender el teléfono y al actualizar la aplicación, porque en ambos casos
+     * Android borra las alarmas. Devuelve cuántas se reprogramaron.
+     */
+    fun reprogramarGuardadas(ahora: LocalDateTime = LocalDateTime.now()): Int =
+        entregar(almacen.leer().filter { it.momento.isAfter(ahora) }).size
+
+    /** Cancela todas las alarmas que esta aplicación dejó programadas. */
+    fun cancelarTodas() {
+        for (solicitud in almacen.leer()) {
+            alarmas.cancel(intencionDeAlarma(solicitud.id, emptyList(), 0))
+        }
+        almacen.vaciar()
+    }
+
+    fun cantidadVigentes(ahora: LocalDateTime = LocalDateTime.now()): Int =
+        almacen.leer().count { it.momento.isAfter(ahora) }
+
+    /** Entrega las alarmas al sistema y devuelve las que quedaron programadas. */
+    private fun entregar(plan: List<SolicitudDeAlarma>): List<SolicitudDeAlarma> {
+        if (!puedeProgramarExactas()) return emptyList()
+        val entregadas = mutableListOf<SolicitudDeAlarma>()
         for (solicitud in plan) {
             val cuando = solicitud.momento.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
             val info = AlarmManager.AlarmClockInfo(cuando, intencionDePantalla())
             try {
                 alarmas.setAlarmClock(info, intencionDeAlarma(solicitud.id, solicitud.lineas, cuando))
-                recordar(solicitud.id)
-                programadas++
+                entregadas.add(solicitud)
             } catch (e: SecurityException) {
                 // El paciente revocó el permiso entre la verificación y la programación.
-                return programadas
+                return entregadas
             }
         }
-        return programadas
-    }
-
-    /** Cancela todas las alarmas que esta aplicación dejó programadas. */
-    fun cancelarTodas() {
-        for (id in ids()) {
-            alarmas.cancel(intencionDeAlarma(id, emptyList(), 0))
-        }
-        vigentes.edit().remove(CLAVE).apply()
-    }
-
-    fun cantidadVigentes(): Int = ids().size
-
-    private fun ids(): Set<Int> =
-        vigentes.getStringSet(CLAVE, emptySet()).orEmpty().mapNotNull { it.toIntOrNull() }.toSet()
-
-    private fun recordar(id: Int) {
-        vigentes.edit().putStringSet(CLAVE, ids().map { it.toString() }.toSet() + id.toString()).apply()
+        return entregadas
     }
 
     /** La próxima alarma de esta aplicación que el sistema tiene registrada, si hay. */
@@ -97,7 +107,4 @@ class ProgramadorDeAlarmas(private val contexto: Context) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
-    private companion object {
-        const val CLAVE = "ids"
-    }
 }
