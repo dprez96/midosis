@@ -1,0 +1,15 @@
+{
+  "name": "midosis-perfiles-firebase",
+  "private": true,
+  "type": "module",
+  "description": "Asigna la comuna y el rol de los usuarios de Firebase Authentication de MiDosis",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "perfil": "node asignar-perfil.mjs"
+  },
+  "dependencies": {
+    "firebase-admin": "14.5.0"
+  }
+}

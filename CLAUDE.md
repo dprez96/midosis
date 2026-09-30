@@ -17,7 +17,7 @@ guion largo (—) en los documentos.
 | `farmacia/` | Aplicación web del punto de dispensación | TypeScript, React |
 | `paciente/` | Aplicación móvil | Kotlin, Android nativo |
 | `contrato/` | Formato de la credencial y vectores de prueba | CBOR, COSE, Base45 |
-| `infra/` | Infraestructura | Google Cloud, `southamerica-west1` |
+| `infra/` | Infraestructura y perfiles de Firebase Authentication | Google Cloud, `southamerica-west1` |
 
 Las decisiones estructurales están en `docs/adr/`. **Léelas antes de proponer un
 cambio de diseño**: muchas alternativas razonables ya fueron evaluadas y
