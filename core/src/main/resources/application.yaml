@@ -2,6 +2,27 @@ spring:
   application:
     name: midosis-core
 
+  # La aplicación se conecta con un usuario sin privilegios de dueño, al que se le
+  # aplican las políticas de aislamiento entre comunas.
+  datasource:
+    url: ${MIDOSIS_DB_URL:jdbc:postgresql://localhost:5432/midosis}
+    username: ${MIDOSIS_DB_USUARIO:midosis_app}
+    password: ${MIDOSIS_DB_CLAVE:}
+
+  # Las migraciones corren con el usuario dueño, que crea las tablas y las políticas.
+  flyway:
+    user: ${MIDOSIS_DB_DUENO:midosis_dueno}
+    password: ${MIDOSIS_DB_DUENO_CLAVE:}
+    placeholders:
+      rolAplicacion: midosis_app
+
+  # Tokens emitidos por Firebase Authentication. La comuna viaja en el claim «comuna».
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${MIDOSIS_JWT_ISSUER:https://securetoken.google.com/midosis-desarrollo}
+
 management:
   endpoints:
     web:
