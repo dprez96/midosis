@@ -7,18 +7,36 @@ Kotlin sobre Spring Boot, arquitectura hexagonal. La lógica de dominio (posolog
 cobertura del tramo, validación de coherencia) no conoce el framework ni la base de
 datos: se prueba sin levantar el contexto de Spring.
 
-## Arranque local
+## Pruebas
 
 ```bash
-docker compose up -d postgres
-./gradlew bootRun --args='--spring.profiles.active=local'
+./gradlew test
 ```
+
+Requiere Docker Desktop abierto: las pruebas levantan un PostgreSQL real con
+Testcontainers. No hace falta instalar ni configurar una base de datos.
+
+## Configuración
+
+| Variable | Qué es |
+|---|---|
+| `MIDOSIS_DB_URL` | URL JDBC de PostgreSQL |
+| `MIDOSIS_DB_USUARIO`, `MIDOSIS_DB_CLAVE` | Usuario de la aplicación, sin privilegios de dueño |
+| `MIDOSIS_DB_DUENO`, `MIDOSIS_DB_DUENO_CLAVE` | Usuario dueño, solo para las migraciones |
+| `MIDOSIS_JWT_ISSUER` | Emisor de los tokens (Firebase Authentication) |
 
 ## Aislamiento entre comunas
 
 Reforzado en el motor de base de datos, no solo en la consulta de la aplicación
-(ADR-011). La batería de pruebas de aislamiento es obligatoria en cada compilación:
-un error de programación no debe poder producir una filtración entre comunas.
+(ADR-011). Toda lectura o escritura pasa por `ContextoComuna`, que fija la comuna en
+la transacción; fuera de ella, las políticas no dejan ver ni escribir ninguna fila.
+
+La comuna sale únicamente del token. Si una petición declara otra, por parámetro o
+cabecera, se rechaza y queda registrada como evento de seguridad.
+
+La batería `AislamientoEntreComunasTest` es obligatoria en cada compilación, y su
+primera prueba verifica que la aplicación no se conecte con un usuario capaz de
+saltarse las políticas.
 
 ## Claves
 

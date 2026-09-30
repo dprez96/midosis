@@ -16,17 +16,9 @@ jobs:
       run:
         working-directory: core
 
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_PASSWORD: pruebas
-          POSTGRES_DB: midosis_qa
-        options: >-
-          --health-cmd pg_isready --health-interval 10s
-          --health-timeout 5s --health-retries 5
-        ports: ["5432:5432"]
-
+    # Sin servicio de base de datos: las pruebas levantan su propio PostgreSQL con
+    # Testcontainers y se conectan con un usuario sin privilegios de dueño. Un servicio
+    # compartido invitaba a conectarse como superusuario, que se salta el aislamiento.
     steps:
       - uses: actions/checkout@v7
 
@@ -54,10 +46,6 @@ jobs:
       - name: Compilar y probar
         if: steps.existe.outputs.listo == 'si'
         run: ./gradlew build --no-daemon
-        env:
-          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/midosis_qa
-          SPRING_DATASOURCE_USERNAME: postgres
-          SPRING_DATASOURCE_PASSWORD: pruebas
 
       # Condicion de la Definicion de Terminado que protege el ADR-011. Mientras
       # core no acceda a datos no hay nada que aislar; en cuanto aparece codigo de
