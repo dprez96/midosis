@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -95,8 +96,13 @@ private fun PruebaDeAlarmas() {
 
     val disparos = remember(actualizar) { registro.disparos() }
 
+    // Desde Android 15 la aplicación dibuja bajo las barras del sistema: el contenido
+    // reserva ese espacio para no quedar tapado por la barra de estado.
     Column(
-        modifier = Modifier.padding(20.dp).verticalScroll(rememberScrollState()),
+        modifier = Modifier
+            .safeDrawingPadding()
+            .padding(20.dp)
+            .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Text("Prueba de alarmas", style = MaterialTheme.typography.headlineMedium)
