@@ -23,3 +23,4 @@ nueva que la reemplaza, y la anterior queda marcada como sustituida.
 | ADR-012 | Anti-replay de mejor esfuerzo fuera de línea, efectivo en línea | [012-anti-replay-de-mejor-esfuerzo-fuera-de-linea.md](012-anti-replay-de-mejor-esfuerzo-fuera-de-linea.md) |
 | ADR-013 | Claves públicas empaquetadas en la aplicación y actualizables | [013-claves-publicas-empaquetadas-en-la-aplicacion-y.md](013-claves-publicas-empaquetadas-en-la-aplicacion-y.md) |
 | ADR-014 | Bitácora de auditoría encadenada por hash | [014-bitacora-de-auditoria-encadenada-por-hash.md](014-bitacora-de-auditoria-encadenada-por-hash.md) |
+| ADR-015 | Las alarmas de toma se programan con setAlarmClock (propuesta) | [015-alarmas-con-setalarmclock.md](015-alarmas-con-setalarmclock.md) |

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nombre_app">MiDosis</string>
+    <string name="canal_tomas">Tomas de medicamentos</string>
+    <string name="canal_tomas_descripcion">Avisa a la hora de tomar cada medicamento. Suena aunque el teléfono esté sin conexión.</string>
+    <string name="notificacion_titulo">Hora de tu medicamento</string>
+    <string name="notificacion_titulo_varios">Hora de tus medicamentos</string>
+</resources>

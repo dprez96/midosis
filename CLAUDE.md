@@ -90,6 +90,12 @@ hay código de persistencia sin esas pruebas.
 - **SDK de Android.** `sdkmanager` está obsoleto y parte los nombres de paquete
   en el punto y coma. Usa `android.exe --sdk=<ruta> sdk install "platforms;android-36"`
   desde `cmdline-tools/latest/bin`. Al terminar se cierra con un error aunque el
-  paquete quede instalado: verifica en disco.
+  paquete quede instalado: verifica en disco. Las plataformas nuevas se publican con
+  número decimal (`platforms;android-37.0`): búscalas así, no solo con enteros.
+- **`paciente/`** compila contra la API 37 (lo exige AndroidX) y apunta a la 36. Con el
+  Kotlin integrado del plugin de Android 9, las pruebas usan `kotlin("test-junit")`, no
+  `kotlin("test")`.
+- **Docker Desktop** no arranca solo tras reiniciar el equipo; sin él, las pruebas de
+  `core/` fallan con "Could not find a valid Docker environment".
 - **JDK.** Los módulos de Gradle declaran el JDK 21 como toolchain y el resolutor
   Foojay lo descarga si falta. Instalar solo el JRE no basta para compilar.
