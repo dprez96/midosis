@@ -16,6 +16,7 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     compileOptions {
@@ -40,4 +41,10 @@ dependencies {
 
     testImplementation("junit:junit:4.13.2")
     testImplementation(kotlin("test-junit"))
+
+    // Pruebas que corren en un teléfono real: lo que depende del almacén de claves de
+    // Android no se puede probar en la computadora.
+    androidTestImplementation("androidx.test:runner:1.7.0")
+    androidTestImplementation("androidx.test.ext:junit:1.3.0")
+    androidTestImplementation(kotlin("test-junit"))
 }
