@@ -72,6 +72,7 @@ Las que más condicionan el código:
 | `core/` | `./gradlew build` | Docker Desktop abierto para las pruebas con PostgreSQL |
 | `motor/` | `./gradlew build` | Nada |
 | `paciente/` | `./gradlew testDebugUnitTest` | SDK de Android. Las alarmas exactas solo se validan en un teléfono físico, nunca en el emulador |
+| `paciente/`, en el teléfono | `./gradlew connectedDebugAndroidTest` | Teléfono conectado. **Desinstala la app al terminar**: se pierden sus permisos y datos. Avisa antes de correrlo en un teléfono de alguien |
 | `farmacia/` | `npm test` | Node 22 |
 
 La batería de aislamiento entre comunas (pruebas con `Aislamiento` en el nombre)
@@ -95,6 +96,10 @@ hay código de persistencia sin esas pruebas.
 - **`paciente/`** compila contra la API 37 (lo exige AndroidX) y apunta a la 36. Con el
   Kotlin integrado del plugin de Android 9, las pruebas usan `kotlin("test-junit")`, no
   `kotlin("test")`.
+- **Almacén de claves de Android.** No acepta que la app elija el vector de
+  inicialización al cifrar ("Caller-provided IV not permitted"). Las pruebas en la
+  computadora usan una clave común y no lo detectan: lo que dependa del almacén se
+  prueba en el teléfono (`connectedDebugAndroidTest`).
 - **Docker Desktop** no arranca solo tras reiniciar el equipo; sin él, las pruebas de
   `core/` fallan con "Could not find a valid Docker environment".
 - **JDK.** Los módulos de Gradle declaran el JDK 21 como toolchain y el resolutor

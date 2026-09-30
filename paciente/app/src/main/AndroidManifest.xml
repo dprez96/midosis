@@ -11,6 +11,8 @@
     <!-- Android 12+: alarmas exactas. Desde Android 14 lo concede el paciente en Ajustes. -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Reprogramar las alarmas al encender el teléfono: Android las borra al apagarse. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:name=".AplicacionMiDosis"
@@ -31,5 +33,16 @@
         <receiver
             android:name=".alarmas.ReceptorDeAlarma"
             android:exported="false" />
+
+        <!-- No exportado: estos avisos los envía solo el sistema, que puede entregarlos
+             igual. Ninguna otra aplicación puede dispararlo. -->
+        <receiver
+            android:name=".alarmas.ReceptorDeArranque"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

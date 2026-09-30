@@ -88,7 +88,14 @@ private fun PruebaDeAlarmas() {
 
     fun programar(tomas: List<cl.midosis.motor.planificacion.TomaProgramada>) {
         val plan = PlanDeAlarmas.construir(tomas, LocalDateTime.now())
-        val n = programador.programar(plan)
+        val n = try {
+            programador.programar(plan)
+        } catch (e: Exception) {
+            // Si falla guardar el plan, la aplicación no se cierra: lo dice. Las alarmas ya
+            // entregadas suenan igual, pero no sobrevivirían a un reinicio.
+            mensaje = "No se pudo guardar el plan: las alarmas no sobrevivirán a un reinicio."
+            return
+        }
         vigentes = programador.cantidadVigentes()
         mensaje = if (n == 0) "No se programó nada: falta el permiso de alarmas exactas."
         else "Programadas: $n. Primera: ${plan.first().momento.format(HORA)}."
