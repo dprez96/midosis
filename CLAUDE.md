@@ -73,7 +73,10 @@ Las que más condicionan el código:
 | `motor/` | `./gradlew build` | Nada |
 | `paciente/` | `./gradlew testDebugUnitTest` | SDK de Android. Las alarmas exactas solo se validan en un teléfono físico, nunca en el emulador |
 | `paciente/`, en el teléfono | `./gradlew connectedDebugAndroidTest` | Teléfono conectado. **Desinstala la app al terminar**: se pierden sus permisos y datos. Avisa antes de correrlo en un teléfono de alguien |
-| `farmacia/` | `npm test` | Node 22 |
+| `farmacia/` | `npm test` y `npm run lint` | Node 22 |
+
+Para ver la web contra `core` y una base con datos sintéticos, en el propio equipo:
+`infra/README.md`, sección «Correr en el equipo».
 
 La batería de aislamiento entre comunas (pruebas con `Aislamiento` en el nombre)
 es obligatoria en cuanto `core/` accede a datos: la integración continua falla si
@@ -104,3 +107,7 @@ hay código de persistencia sin esas pruebas.
   `core/` fallan con "Could not find a valid Docker environment".
 - **JDK.** Los módulos de Gradle declaran el JDK 21 como toolchain y el resolutor
   Foojay lo descarga si falta. Instalar solo el JRE no basta para compilar.
+- **`farmacia/` fija dos versiones a propósito.** TypeScript 6.0, porque
+  typescript-eslint no soporta la 7, y jsdom 29, porque la 30 exige Node 22.22. Usa
+  `@firebase/app` y `@firebase/auth`, no el paquete `firebase`, que arrastra Firestore
+  con vulnerabilidades de gRPC que la web no usa.

@@ -1,0 +1,12 @@
+# Perfil para correr core en el equipo de desarrollo, contra la base de
+# infra/local/compose.yaml. Agrega el catálogo sintético de infra/local/semilla.
+#
+#   ./gradlew bootRun --args='--spring.profiles.active=local'
+#
+# Las claves son las de esa base local, que solo escucha en el propio equipo.
+spring:
+  datasource:
+    password: ${MIDOSIS_DB_CLAVE:app_local}
+  flyway:
+    password: ${MIDOSIS_DB_DUENO_CLAVE:dueno_local}
+    locations: classpath:db/migration,filesystem:../infra/local/semilla

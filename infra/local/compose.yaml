@@ -1,0 +1,32 @@
+# PostgreSQL para correr core en el equipo de desarrollo, con datos sintéticos.
+#
+# Reproduce los usuarios de producción: midosis_dueno es dueño de las tablas y corre las
+# migraciones; midosis_app es el usuario de la aplicación, sin privilegios de dueño, al que
+# se le aplica el aislamiento entre comunas. Ninguno es superusuario.
+#
+# Solo escucha en el propio equipo. Las claves son de este entorno local y no sirven en
+# ningún otro.
+#
+#   docker compose -f infra/local/compose.yaml up -d
+
+name: midosis-local
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: midosis
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_local
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - ./roles.sql:/docker-entrypoint-initdb.d/roles.sql:ro
+      - datos:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "midosis"]
+      interval: 5s
+      retries: 10
+
+volumes:
+  datos:
