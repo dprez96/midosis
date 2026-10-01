@@ -27,5 +27,12 @@ data class Producto(
 interface CatalogoDeProductos {
     fun listar(): List<Producto>
     fun buscar(gtin: Gtin): Producto?
+
+    /**
+     * Productos cuyo nombre o principio activo contiene el término, o cuyo código empieza
+     * por él. Ordenados por nombre y acotados a [limite].
+     */
+    fun buscarPorTexto(termino: TerminoDeBusqueda, limite: Int): List<Producto>
+
     fun guardar(producto: Producto)
 }
