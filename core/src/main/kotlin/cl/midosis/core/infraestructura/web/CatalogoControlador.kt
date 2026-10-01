@@ -6,6 +6,9 @@ import cl.midosis.core.dominio.catalogo.GtinInvalido
 import cl.midosis.core.dominio.catalogo.Producto
 import cl.midosis.core.dominio.catalogo.TerminoDeBusqueda
 import cl.midosis.core.dominio.catalogo.TerminoInvalido
+import cl.midosis.core.dominio.posologia.PlantillaDuplicada
+import cl.midosis.core.dominio.posologia.PosologiaInvalida
+import cl.midosis.core.dominio.posologia.ProductoNoEncontrado
 import cl.midosis.core.infraestructura.seguridad.ComunaNoResuelta
 import cl.midosis.core.infraestructura.seguridad.ResolutorDeComuna
 import org.springframework.http.HttpStatus
@@ -73,4 +76,16 @@ class ManejoDeErrores {
     @ExceptionHandler(TerminoInvalido::class)
     fun terminoInvalido(e: TerminoInvalido): ResponseEntity<Map<String, String>> =
         ResponseEntity.badRequest().body(mapOf("error" to (e.message ?: "búsqueda inválida")))
+
+    @ExceptionHandler(PosologiaInvalida::class)
+    fun posologiaInvalida(e: PosologiaInvalida): ResponseEntity<Map<String, String>> =
+        ResponseEntity.badRequest().body(mapOf("error" to (e.message ?: "posología inválida")))
+
+    /** Igual que la consulta de un producto: sin cuerpo, exista o no en otra comuna. */
+    @ExceptionHandler(ProductoNoEncontrado::class)
+    fun productoNoEncontrado(): ResponseEntity<Unit> = ResponseEntity.notFound().build()
+
+    @ExceptionHandler(PlantillaDuplicada::class)
+    fun plantillaDuplicada(e: PlantillaDuplicada): ResponseEntity<Map<String, String>> =
+        ResponseEntity.status(HttpStatus.CONFLICT).body(mapOf("error" to (e.message ?: "plantilla duplicada")))
 }

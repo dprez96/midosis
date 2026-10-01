@@ -29,7 +29,7 @@ class BusquedaEnCatalogoTest : PruebaIntegracion() {
 
     @BeforeEach
     fun datos() {
-        administrador.execute("TRUNCATE producto, evento_seguridad")
+        limpiarDatos()
         contexto.en(providencia) {
             catalogo.guardar(producto("780225001234", "Losartán 50 mg", "Losartán potásico", "50 mg"))
             catalogo.guardar(producto("780225001240", "Metformina 850 mg", "Metformina clorhidrato", "850 mg"))

@@ -1,4 +1,4 @@
-import type { ApiDeCatalogo } from './api/cliente'
+import type { ApiDelMeson } from './api/cliente'
 import { PantallaMeson } from './meson/PantallaMeson'
 import { PantallaIngreso } from './sesion/PantallaIngreso'
 import { NOMBRE_DEL_ROL, type Perfil, type ServicioDeSesion } from './sesion/sesion'
@@ -6,7 +6,7 @@ import { useSesion } from './sesion/useSesion'
 
 interface Props {
   servicio: ServicioDeSesion
-  api: ApiDeCatalogo
+  api: ApiDelMeson
 }
 
 export function App({ servicio, api }: Props) {
@@ -27,7 +27,13 @@ export function App({ servicio, api }: Props) {
   return (
     <>
       <Encabezado perfil={perfil} cerrar={servicio.cerrar} />
-      <main className="contenido">{perfil.comuna && perfil.rol ? <PantallaMeson api={api} /> : <PerfilIncompleto />}</main>
+      <main className="contenido">
+        {perfil.comuna && perfil.rol ? (
+          <PantallaMeson api={api} puedeGuardarPlantillas={perfil.rol === 'qf'} />
+        ) : (
+          <PerfilIncompleto />
+        )}
+      </main>
     </>
   )
 }

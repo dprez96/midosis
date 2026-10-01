@@ -34,6 +34,11 @@ Los tokens se validan contra Firebase igual que en cualquier ambiente.
 | `GET /api/catalogo/productos` | Catálogo de la comuna del token |
 | `GET /api/catalogo/productos/{gtin}` | Un producto; 404 si no está en la comuna, exista o no en otra |
 | `GET /api/catalogo/productos?texto=` | Búsqueda manual por nombre, principio activo o comienzo del código, sin distinguir tildes ni mayúsculas (HU-02) |
+| `GET /api/catalogo/productos/{gtin}/plantillas` | Plantillas de posología frecuente del producto en la comuna (HU-03) |
+| `POST /api/catalogo/productos/{gtin}/plantillas` | Crea una plantilla. Solo el rol `qf`; 409 si ya existe una igual para el producto |
+
+El rol sale del claim `rol` del token, igual que la comuna sale de `comuna`. Las reglas
+de quién puede qué están juntas en `ConfiguracionSeguridad`.
 
 ## Configuración
 

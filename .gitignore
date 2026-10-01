@@ -9,6 +9,7 @@ target/
 
 # Gradle
 .gradle/
+.kotlin/
 gradle-app.setting
 
 # Android
