@@ -2,7 +2,6 @@ version: 2
 
 # Cada ecosistema se activa cuando su modulo tiene manifiesto: Dependabot falla
 # si apunta a una carpeta sin build.gradle.kts o sin package.json.
-# Pendiente: /farmacia (npm), cuando exista su package.json.
 updates:
   - package-ecosystem: gradle
     directory: /core
@@ -21,6 +20,33 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+
+  - package-ecosystem: npm
+    directory: /farmacia
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # Las dos piezas de Firebase tienen que quedar en la misma entrega.
+      firebase:
+        patterns: ["@firebase/*"]
+      # Las herramientas de desarrollo se prueban juntas, en un solo pull request.
+      herramientas:
+        dependency-type: development
+        update-types: [minor, patch]
+    ignore:
+      # jsdom 30 exige Node 22.22 o posterior.
+      - dependency-name: jsdom
+        versions: [">=30"]
+      # typescript-eslint todavía no soporta TypeScript 6.1 ni la 7.
+      - dependency-name: typescript
+        versions: [">=6.1"]
+
+  - package-ecosystem: npm
+    directory: /infra/firebase
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 2
 
   - package-ecosystem: github-actions
     directory: /
