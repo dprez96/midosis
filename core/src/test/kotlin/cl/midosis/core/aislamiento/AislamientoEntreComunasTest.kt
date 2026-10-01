@@ -101,6 +101,29 @@ class AislamientoEntreComunasTest : PruebaIntegracion() {
         }
     }
 
+    @Test
+    fun `la busqueda manual no encuentra productos de otra comuna, ni por nombre ni por codigo`() {
+        // Los once primeros dígitos solo los tiene el producto de Santiago.
+        for (texto in listOf("atorvastatina", soloEnSantiago.gtin.valor.take(11))) {
+            mvc.get("/api/catalogo/productos") {
+                param("texto", texto)
+                header("Authorization", "Bearer ${token(providencia.valor)}")
+            }.andExpect {
+                status { isOk() }
+                jsonPath("$.length()") { value(0) }
+            }
+
+            // Control: el producto existe, y su comuna sí lo encuentra.
+            mvc.get("/api/catalogo/productos") {
+                param("texto", texto)
+                header("Authorization", "Bearer ${token(santiago.valor)}")
+            }.andExpect {
+                status { isOk() }
+                jsonPath("$.length()") { value(1) }
+            }
+        }
+    }
+
     // ------------------------------------------------------------ Tabla 99, prueba 2 y criterio de la HU-28
 
     @Test

@@ -4,6 +4,8 @@ import cl.midosis.core.aplicacion.catalogo.ConsultaCatalogo
 import cl.midosis.core.dominio.catalogo.Gtin
 import cl.midosis.core.dominio.catalogo.GtinInvalido
 import cl.midosis.core.dominio.catalogo.Producto
+import cl.midosis.core.dominio.catalogo.TerminoDeBusqueda
+import cl.midosis.core.dominio.catalogo.TerminoInvalido
 import cl.midosis.core.infraestructura.seguridad.ComunaNoResuelta
 import cl.midosis.core.infraestructura.seguridad.ResolutorDeComuna
 import org.springframework.http.HttpStatus
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.bind.annotation.RestControllerAdvice
 
@@ -25,6 +28,11 @@ class CatalogoControlador(private val catalogo: ConsultaCatalogo) {
     @GetMapping
     fun listar(@AuthenticationPrincipal jwt: Jwt): List<ProductoRespuesta> =
         catalogo.listar(ResolutorDeComuna.desde(jwt)).map(ProductoRespuesta::de)
+
+    /** Búsqueda manual asistida por nombre, principio activo o comienzo del código (HU-02). */
+    @GetMapping(params = ["texto"])
+    fun buscarPorTexto(@AuthenticationPrincipal jwt: Jwt, @RequestParam texto: String): List<ProductoRespuesta> =
+        catalogo.buscarPorTexto(ResolutorDeComuna.desde(jwt), TerminoDeBusqueda.de(texto)).map(ProductoRespuesta::de)
 
     /**
      * Un producto que existe en otra comuna responde exactamente igual que uno que no
@@ -61,4 +69,8 @@ class ManejoDeErrores {
     @ExceptionHandler(GtinInvalido::class)
     fun gtinInvalido(e: GtinInvalido): ResponseEntity<Map<String, String>> =
         ResponseEntity.badRequest().body(mapOf("error" to (e.message ?: "código de producto inválido")))
+
+    @ExceptionHandler(TerminoInvalido::class)
+    fun terminoInvalido(e: TerminoInvalido): ResponseEntity<Map<String, String>> =
+        ResponseEntity.badRequest().body(mapOf("error" to (e.message ?: "búsqueda inválida")))
 }

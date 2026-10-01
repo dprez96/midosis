@@ -1,0 +1,264 @@
+:root {
+  --fondo: #f4f6f9;
+  --superficie: #ffffff;
+  --texto: #1b2430;
+  --secundario: #4a5565;
+  --borde: #d3d9e1;
+  --primario: #0b5cab;
+  --primario-oscuro: #08467f;
+  --exito-fondo: #e6f5eb;
+  --exito-texto: #0f5a2e;
+  --info-fondo: #e8f1fb;
+  --info-texto: #0b3d75;
+  --error-fondo: #fdecea;
+  --error-texto: #8a1c12;
+  --radio: 10px;
+
+  color-scheme: light;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--texto);
+  background: var(--fondo);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--fondo);
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: 1.5rem;
+}
+
+h2 {
+  font-size: 1.125rem;
+}
+
+:focus-visible {
+  outline: 3px solid var(--primario);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------- estructura */
+
+.encabezado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 24px;
+  background: var(--superficie);
+  border-bottom: 1px solid var(--borde);
+}
+
+.marca {
+  font-weight: 700;
+  color: var(--primario);
+}
+
+.contenido {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+.meson {
+  display: grid;
+  gap: 16px;
+}
+
+.tarjeta {
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+}
+
+.fila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.fila > input {
+  flex: 1 1 240px;
+}
+
+.espaciada {
+  justify-content: space-between;
+}
+
+.secundario {
+  color: var(--secundario);
+  font-size: 0.9375rem;
+}
+
+.codigo {
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 0.875rem;
+  color: var(--secundario);
+}
+
+.cargando {
+  padding: 48px;
+  text-align: center;
+  color: var(--secundario);
+}
+
+/* ---------------------------------------------------------------- controles */
+
+label {
+  font-weight: 600;
+}
+
+input,
+select {
+  width: 100%;
+  padding: 10px 12px;
+  font: inherit;
+  color: inherit;
+  background: var(--superficie);
+  border: 1px solid #8a94a3;
+  border-radius: 8px;
+}
+
+.lector input {
+  font-size: 1.25rem;
+  letter-spacing: 0.02em;
+}
+
+button {
+  padding: 10px 16px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--primario);
+  background: var(--superficie);
+  border: 1px solid var(--primario);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: var(--info-fondo);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+button.primario {
+  color: #ffffff;
+  background: var(--primario);
+}
+
+button.primario:hover {
+  background: var(--primario-oscuro);
+}
+
+button.enlace {
+  justify-self: start;
+  padding: 4px 0;
+  border: none;
+  background: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ---------------------------------------------------------------- avisos */
+
+.estado:empty {
+  display: none;
+}
+
+.aviso {
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.aviso-exito {
+  color: var(--exito-texto);
+  background: var(--exito-fondo);
+}
+
+.aviso-info {
+  color: var(--info-texto);
+  background: var(--info-fondo);
+}
+
+.aviso-error {
+  color: var(--error-texto);
+  background: var(--error-fondo);
+}
+
+/* ---------------------------------------------------------------- listas */
+
+.lineas,
+.resultados {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.linea {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+}
+
+.nombre {
+  font-weight: 700;
+}
+
+.resultados button {
+  display: grid;
+  width: 100%;
+  gap: 2px;
+  text-align: left;
+  color: var(--texto);
+  border-color: var(--borde);
+}
+
+.resultados .nombre {
+  color: var(--primario);
+}
+
+/* ---------------------------------------------------------------- ingreso */
+
+.ingreso {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 16px;
+}
+
+.ingreso .tarjeta {
+  width: min(400px, 100%);
+}
+
+.ingreso button.primario {
+  margin-top: 8px;
+}

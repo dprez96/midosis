@@ -3,6 +3,7 @@ package cl.midosis.core.infraestructura.persistencia
 import cl.midosis.core.dominio.catalogo.CatalogoDeProductos
 import cl.midosis.core.dominio.catalogo.Gtin
 import cl.midosis.core.dominio.catalogo.Producto
+import cl.midosis.core.dominio.catalogo.TerminoDeBusqueda
 import cl.midosis.core.dominio.comuna.CodigoComuna
 import org.springframework.jdbc.core.RowMapper
 import org.springframework.jdbc.core.simple.JdbcClient
@@ -37,6 +38,33 @@ class CatalogoJdbc(private val jdbc: JdbcClient) : CatalogoDeProductos {
             .optional()
             .orElse(null)
 
+    /**
+     * La comparación sin tildes se hace con translate y no con la extensión unaccent, que
+     * habría que instalar en cada base. El término llega ya normalizado de la misma forma
+     * (ver [TerminoDeBusqueda.normalizar]), y los comodines de LIKE que traiga se escapan:
+     * buscar «%» no puede traer el catálogo completo.
+     */
+    override fun buscarPorTexto(termino: TerminoDeBusqueda, limite: Int): List<Producto> {
+        val literal = escaparComodines(termino.normalizado)
+        return jdbc.sql(
+            """
+            SELECT * FROM producto
+            WHERE translate(lower(nombre || ' ' || principio_activo), :conTilde, :sinTilde)
+                  LIKE :contiene ESCAPE '\'
+               OR gtin LIKE :comienza ESCAPE '\'
+            ORDER BY nombre, gtin
+            LIMIT :limite
+            """.trimIndent()
+        )
+            .param("conTilde", CON_TILDE)
+            .param("sinTilde", SIN_TILDE)
+            .param("contiene", "%$literal%")
+            .param("comienza", "$literal%")
+            .param("limite", limite)
+            .query(fila)
+            .list()
+    }
+
     override fun guardar(producto: Producto) {
         jdbc.sql(
             """
@@ -56,5 +84,16 @@ class CatalogoJdbc(private val jdbc: JdbcClient) : CatalogoDeProductos {
             .param("forma", producto.forma)
             .param("concentracion", producto.concentracion)
             .update()
+    }
+
+    private companion object {
+        /** Letras que translate reemplaza; incluye las mayúsculas por si lower no las cubre. */
+        const val CON_TILDE = "áéíóúüñàèìòùâêîôûäëïöÁÉÍÓÚÜÑ"
+
+        /** Su equivalente normalizado, letra por letra, con la misma regla que el término. */
+        val SIN_TILDE: String = CON_TILDE.map { TerminoDeBusqueda.normalizar(it.toString()) }.joinToString("")
+
+        fun escaparComodines(texto: String): String =
+            texto.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
     }
 }

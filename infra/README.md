@@ -19,6 +19,25 @@ la caché solo se incorpora si las métricas superan los umbrales definidos.
 Desarrollo y QA: datos sintéticos, siempre. Producción: datos reales con controles
 completos. Un volcado de producción no se restaura en QA bajo ninguna circunstancia.
 
+## Correr en el equipo
+
+`local/` levanta un PostgreSQL con los mismos usuarios que producción: `midosis_dueno`,
+dueño de las tablas, y `midosis_app`, sin privilegios de dueño. Ninguno es superusuario,
+así que el aislamiento entre comunas rige igual que en la nube. Solo escucha en el propio
+equipo.
+
+Con Docker Desktop abierto, desde la raíz del repositorio:
+
+```bash
+docker compose -f infra/local/compose.yaml up -d
+cd core && ./gradlew bootRun --args='--spring.profiles.active=local'
+cd farmacia && npm run dev        # en otra terminal; ver farmacia/README.md
+```
+
+El perfil `local` de `core` carga `local/semilla`: diez productos sintéticos en la comuna
+13123, la de los usuarios de prueba. Para partir de cero:
+`docker compose -f infra/local/compose.yaml down -v`.
+
 ## Firebase Authentication
 
 Proyecto de desarrollo: **MiDosis Desarrollo** (`midosis-desarrollo`), plan Spark, sin costo.

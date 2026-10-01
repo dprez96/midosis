@@ -16,6 +16,25 @@ datos: se prueba sin levantar el contexto de Spring.
 Requiere Docker Desktop abierto: las pruebas levantan un PostgreSQL real con
 Testcontainers. No hace falta instalar ni configurar una base de datos.
 
+## Correr en el equipo
+
+Con la base local de `infra/local` levantada (ver `infra/README.md`):
+
+```bash
+./gradlew bootRun --args='--spring.profiles.active=local'
+```
+
+El perfil `local` usa esa base y carga el catálogo sintético de `infra/local/semilla`.
+Los tokens se validan contra Firebase igual que en cualquier ambiente.
+
+## API
+
+| Método y ruta | Qué hace |
+|---|---|
+| `GET /api/catalogo/productos` | Catálogo de la comuna del token |
+| `GET /api/catalogo/productos/{gtin}` | Un producto; 404 si no está en la comuna, exista o no en otra |
+| `GET /api/catalogo/productos?texto=` | Búsqueda manual por nombre, principio activo o comienzo del código, sin distinguir tildes ni mayúsculas (HU-02) |
+
 ## Configuración
 
 | Variable | Qué es |
@@ -23,7 +42,7 @@ Testcontainers. No hace falta instalar ni configurar una base de datos.
 | `MIDOSIS_DB_URL` | URL JDBC de PostgreSQL |
 | `MIDOSIS_DB_USUARIO`, `MIDOSIS_DB_CLAVE` | Usuario de la aplicación, sin privilegios de dueño |
 | `MIDOSIS_DB_DUENO`, `MIDOSIS_DB_DUENO_CLAVE` | Usuario dueño, solo para las migraciones |
-| `MIDOSIS_JWT_ISSUER` | Emisor de los tokens (Firebase Authentication) |
+| `MIDOSIS_JWT_ISSUER`, `MIDOSIS_JWT_AUDIENCIA` | Emisor y audiencia de los tokens (Firebase Authentication) |
 
 ## Aislamiento entre comunas
 
