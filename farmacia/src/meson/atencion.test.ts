@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { losartan, metformina } from '../test/datos'
+import { cadaDoceHoras, losartan, metformina } from '../test/datos'
 import { ATENCION_NUEVA, reducirAtencion } from './atencion'
 
 describe('reducirAtencion', () => {
@@ -26,6 +26,18 @@ describe('reducirAtencion', () => {
     const conError = reducirAtencion(conLosartan, { tipo: 'avisar', aviso: { tipo: 'error', texto: 'falló' } })
 
     expect(conError.lineas).toBe(conLosartan.lineas)
+  })
+
+  it('registra la posología solo en su línea, con la plantilla de la que salió', () => {
+    let atencion = reducirAtencion(ATENCION_NUEVA, { tipo: 'identificado', producto: losartan })
+    atencion = reducirAtencion(atencion, { tipo: 'identificado', producto: metformina })
+    const { id, ...posologia } = cadaDoceHoras
+    atencion = reducirAtencion(atencion, { tipo: 'posologia', id: 1, posologia, plantillaId: id })
+
+    expect(atencion.lineas.map((l) => [l.posologia?.frecuencia ?? null, l.plantillaId])).toEqual([
+      ['PT12H', 'plantilla-1'],
+      [null, null],
+    ])
   })
 
   it('quitar una línea que no existe no cambia nada', () => {

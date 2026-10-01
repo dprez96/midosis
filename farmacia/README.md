@@ -50,6 +50,18 @@ La integración continua corre las tres.
 - Si el código no está en el catálogo, se abre la búsqueda manual por nombre,
   principio activo o comienzo del código. Lo ya capturado en la atención no se pierde.
 
+## La posología
+
+- Cada producto identificado muestra las plantillas de posología frecuente de la
+  comuna. Elegir una deja la posología registrada sin escribir nada.
+- Si ninguna corresponde, se ingresa en campos estructurados: cantidad y unidad por
+  toma, intervalo en horas o días, duración opcional e indicaciones breves.
+- Solo el químico farmacéutico ve el botón para guardarla como plantilla comunal; core
+  lo vuelve a verificar con el rol del token. El auxiliar puede usarla solo en esa
+  atención.
+- Después de cada acción el foco vuelve al campo del código. Si igual queda en la página,
+  la primera tecla del lector lo devuelve allí.
+
 ## Dependencias
 
 La sesión usa `@firebase/app` y `@firebase/auth` directamente, no el paquete
