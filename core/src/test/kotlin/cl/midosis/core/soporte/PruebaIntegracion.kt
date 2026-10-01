@@ -63,12 +63,24 @@ abstract class PruebaIntegracion {
             JdbcTemplate(DriverManagerDataSource(postgres.jdbcUrl, postgres.username, postgres.password))
         }
 
-        fun token(comuna: String?, firma: RSAKey = clave): String {
+        /** Vacía todas las tablas con datos de comunas. Una tabla nueva se agrega aquí. */
+        fun limpiarDatos() {
+            administrador.execute("TRUNCATE plantilla_posologia, producto, evento_seguridad")
+        }
+
+        /** Token firmado con el perfil indicado. Por defecto, un auxiliar de farmacia. */
+        fun token(
+            comuna: String?,
+            firma: RSAKey = clave,
+            rol: String? = "auxiliar",
+            sujeto: String = "usuario-de-prueba",
+        ): String {
             val claims = JWTClaimsSet.Builder()
-                .subject("usuario-de-prueba")
+                .subject(sujeto)
                 .issueTime(Date())
                 .expirationTime(Date(System.currentTimeMillis() + 600_000))
                 .apply { if (comuna != null) claim("comuna", comuna) }
+                .apply { if (rol != null) claim("rol", rol) }
                 .build()
             val jwt = SignedJWT(JWSHeader.Builder(JWSAlgorithm.RS256).keyID(firma.keyID).build(), claims)
             jwt.sign(RSASSASigner(firma))

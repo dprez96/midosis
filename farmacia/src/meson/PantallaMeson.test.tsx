@@ -16,7 +16,7 @@ const lineas = () => within(screen.getByRole('region', { name: 'Productos de est
 describe('PantallaMeson (HU-02)', () => {
   it('un producto escaneado queda identificado con su principio activo, forma y concentración', async () => {
     const usuario = userEvent.setup()
-    render(<PantallaMeson api={catalogoFalso([losartan])} />)
+    render(<PantallaMeson puedeGuardarPlantillas={false} api={catalogoFalso([losartan])} />)
 
     expect(lector()).toHaveFocus()
     await escanear(usuario, losartan.gtin)
@@ -30,7 +30,7 @@ describe('PantallaMeson (HU-02)', () => {
 
   it('un código fuera del catálogo ofrece la búsqueda manual sin perder lo ya capturado', async () => {
     const usuario = userEvent.setup()
-    render(<PantallaMeson api={catalogoFalso([losartan, metformina])} />)
+    render(<PantallaMeson puedeGuardarPlantillas={false} api={catalogoFalso([losartan, metformina])} />)
 
     await escanear(usuario, losartan.gtin)
     await lineas().findByText('Losartán 50 mg')
@@ -55,7 +55,7 @@ describe('PantallaMeson (HU-02)', () => {
   it('un código mal leído no llega al catálogo y pide volver a escanear', async () => {
     const usuario = userEvent.setup()
     const catalogo = catalogoFalso([losartan])
-    render(<PantallaMeson api={catalogo} />)
+    render(<PantallaMeson puedeGuardarPlantillas={false} api={catalogo} />)
 
     await escanear(usuario, '7802250012345')
 
@@ -65,7 +65,7 @@ describe('PantallaMeson (HU-02)', () => {
 
   it('escanear dos veces el mismo envase no lo duplica', async () => {
     const usuario = userEvent.setup()
-    render(<PantallaMeson api={catalogoFalso([losartan])} />)
+    render(<PantallaMeson puedeGuardarPlantillas={false} api={catalogoFalso([losartan])} />)
 
     await escanear(usuario, losartan.gtin)
     await lineas().findByText('Losartán 50 mg')
@@ -77,7 +77,7 @@ describe('PantallaMeson (HU-02)', () => {
 
   it('un código escaneado con la búsqueda abierta se procesa como una lectura', async () => {
     const usuario = userEvent.setup()
-    render(<PantallaMeson api={catalogoFalso([losartan])} />)
+    render(<PantallaMeson puedeGuardarPlantillas={false} api={catalogoFalso([losartan])} />)
 
     await usuario.click(screen.getByRole('button', { name: 'Buscar por nombre' }))
     expect(screen.getByRole('searchbox')).toHaveFocus()
@@ -90,7 +90,7 @@ describe('PantallaMeson (HU-02)', () => {
   it('si core no responde, lo dice y conserva lo capturado', async () => {
     const usuario = userEvent.setup()
     const catalogo = catalogoFalso([losartan])
-    render(<PantallaMeson api={catalogo} />)
+    render(<PantallaMeson puedeGuardarPlantillas={false} api={catalogo} />)
     await escanear(usuario, losartan.gtin)
     await lineas().findByText('Losartán 50 mg')
 
@@ -105,7 +105,7 @@ describe('PantallaMeson (HU-02)', () => {
 
   it('un producto se puede quitar de la atención', async () => {
     const usuario = userEvent.setup()
-    render(<PantallaMeson api={catalogoFalso([losartan])} />)
+    render(<PantallaMeson puedeGuardarPlantillas={false} api={catalogoFalso([losartan])} />)
     await escanear(usuario, losartan.gtin)
     await lineas().findByText('Losartán 50 mg')
 

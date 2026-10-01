@@ -45,7 +45,7 @@ class AislamientoEntreComunasTest : PruebaIntegracion() {
 
     @BeforeEach
     fun datos() {
-        administrador.execute("TRUNCATE producto, evento_seguridad")
+        limpiarDatos()
         contexto.en(providencia) {
             catalogo.guardar(losartan)
             catalogo.guardar(metformina)
