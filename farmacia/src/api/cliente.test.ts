@@ -63,6 +63,19 @@ describe('crearApi', () => {
     await expect(api.buscarProducto(losartan.gtin)).rejects.toThrow('La sesión expiró')
   })
 
+  it('crea una plantilla enviando la posología como JSON', async () => {
+    const posologia = { cantidad: 1, unidad: 'comprimido' as const, frecuencia: 'PT12H', duracionDias: 30, indicaciones: null }
+    fetchSimulado.mockResolvedValue(respuesta(201, { ...posologia, id: 'nueva' }))
+
+    await expect(api.crearPlantilla(losartan.gtin, posologia)).resolves.toMatchObject({ id: 'nueva' })
+
+    const [url, opciones] = fetchSimulado.mock.calls[0]!
+    expect(url).toBe('/api/catalogo/productos/7802250012344/plantillas')
+    expect(opciones?.method).toBe('POST')
+    expect(new Headers(opciones?.headers).get('Content-Type')).toBe('application/json')
+    expect(JSON.parse(String(opciones?.body))).toEqual(posologia)
+  })
+
   it('distingue la falta de conexión', async () => {
     fetchSimulado.mockRejectedValue(new TypeError('Failed to fetch'))
 

@@ -220,13 +220,15 @@ button.enlace {
 }
 
 .linea {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  display: grid;
   gap: 12px;
   padding: 12px 16px;
   border: 1px solid var(--borde);
   border-radius: 8px;
+}
+
+.linea > .fila {
+  align-items: flex-start;
 }
 
 .nombre {
@@ -261,4 +263,58 @@ button.enlace {
 
 .ingreso button.primario {
   margin-top: 8px;
+}
+
+/* ---------------------------------------------------------------- posología */
+
+.posologia {
+  display: grid;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--borde);
+}
+
+.plantillas {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.plantillas button {
+  width: 100%;
+  font-weight: 500;
+  text-align: left;
+  color: var(--texto);
+  border-color: var(--borde);
+}
+
+.plantillas button[aria-pressed='true'] {
+  border: 2px solid var(--primario);
+  background: var(--info-fondo);
+}
+
+.formulario-posologia {
+  display: grid;
+  gap: 12px;
+}
+
+.formulario-posologia .campos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.formulario-posologia .campos .fila {
+  flex-wrap: nowrap;
+}
+
+.formulario-posologia .campos .fila > input {
+  flex: 1 1 60px;
+  min-width: 0;
+}
+
+.formulario-posologia .campos .fila > select {
+  width: auto;
 }
