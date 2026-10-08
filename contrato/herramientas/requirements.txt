@@ -1,0 +1,6 @@
+# Generador de vectores del contrato. Python 3.12 o 3.13: pycddl no publica
+# todavía ruedas para la 3.14 en Windows.
+cbor2==6.1.5
+cryptography==50.0.2
+pycddl==0.6.4
+pycose==1.1.0

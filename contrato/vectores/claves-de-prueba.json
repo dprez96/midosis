@@ -1,0 +1,63 @@
+{
+  "advertencia": "SOLO PRUEBAS. Cada clave es el SHA-256 de su frase, que es pública: no protegen nada. La aplicación de producción rechaza cualquier clave cuyo kid empiece con «prueba-».",
+  "firma": [
+    {
+      "kid": "prueba-1",
+      "frase": "MiDosis, clave de firma de prueba prueba-1",
+      "privada": "4f9433da86af1e4c520b3a7951ce1a76527534097790e285dfaa975d2c6a67e3",
+      "publica": "10e14999d97e2fdc7bcd97d4d5c648706775101bb3becbb2f94d9e7e192627d8",
+      "comuna": "13123",
+      "vigenteDesde": 1767225600,
+      "vigenteHasta": null,
+      "revocada": false,
+      "enElConjunto": true
+    },
+    {
+      "kid": "prueba-2",
+      "frase": "MiDosis, clave de firma de prueba prueba-2",
+      "privada": "7bf0fba0caf744f11525eb9061251fae656351b1329e7581fa43257108b3caef",
+      "publica": "a9abe9487b3c73c496f30e8b60fedfdc3017cdbe99759f688475680bcec4de9c",
+      "comuna": "13123",
+      "vigenteDesde": 1788220800,
+      "vigenteHasta": null,
+      "revocada": false,
+      "enElConjunto": true
+    },
+    {
+      "kid": "prueba-revocada",
+      "frase": "MiDosis, clave de firma de prueba prueba-revocada",
+      "privada": "919ba67e6863586921fedf90adff434f1cd3e673a67c8d60f99d4c8adc78cf95",
+      "publica": "17e110dd4ff583969297019533f57511e56e34354efba317f48c3c7968a4bfc1",
+      "comuna": "13123",
+      "vigenteDesde": 1767225600,
+      "vigenteHasta": null,
+      "revocada": true,
+      "enElConjunto": true
+    },
+    {
+      "kid": "prueba-desconocida",
+      "frase": "MiDosis, clave de firma de prueba prueba-desconocida",
+      "privada": "2cf88cb3b3eb7d56523dc908a6c28ee01abcaf398768755c7cddf07f5eee3847",
+      "publica": "ab238fd402ff80e1168bb2f5f0b2bdb58d198ae8c331fba0b3cec275c5785e05",
+      "comuna": "13123",
+      "vigenteDesde": 1767225600,
+      "vigenteHasta": null,
+      "revocada": false,
+      "enElConjunto": false
+    }
+  ],
+  "contenido": [
+    {
+      "kid": "prueba-c1",
+      "frase": "MiDosis, clave de contenido de prueba prueba-c1",
+      "clave": "9404adddf7a504e65ce5bcdadfb7fb6a913d65aaae3110f8817838207ecb4da8",
+      "enElConjunto": true
+    },
+    {
+      "kid": "prueba-c9",
+      "frase": "MiDosis, clave de contenido de prueba prueba-c9",
+      "clave": "620abe968390c105eb3e2e17561c7c4d31adc8ab19e225d56bade13aafd9f899",
+      "enElConjunto": false
+    }
+  ]
+}

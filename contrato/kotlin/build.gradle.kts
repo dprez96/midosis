@@ -13,8 +13,8 @@ repositories {
     mavenCentral()
 }
 
-// Se construye con el JDK 21, pero genera bytecode de Java 17: la biblioteca la
-// consumen core (JVM 21) y la aplicacion Android, que no acepta cualquier version.
+// Igual que el motor: se construye con el JDK 21 y genera bytecode de Java 17,
+// porque la usan core (JVM 21) y la aplicación Android.
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
@@ -30,22 +30,26 @@ kotlin {
 }
 
 dependencies {
+    // CBOR: rechaza por omisión las claves repetidas y los bytes sobrantes.
+    implementation("com.upokecenter:cbor:4.5.6")
+    // Ed25519. Android lo trae recién desde la API 33 y la aplicación soporta la 28.
+    implementation("org.bouncycastle:bcprov-jdk18on:1.86")
+
     testImplementation(kotlin("test"))
-    // Solo para leer los vectores de contrato/ en las pruebas; la biblioteca no la usa.
     testImplementation("tools.jackson.core:jackson-databind:3.1.5")
     testImplementation(platform("org.junit:junit-bom:6.1.3"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
-// Los vectores de prueba del contrato son la fuente de verdad del calculo de
-// cobertura: si cambian, las pruebas del motor tienen que volver a correr.
-val vectoresDelContrato = layout.projectDirectory.dir("../contrato/vectores")
+// Las pruebas corren contra los vectores de contrato/vectores, la fuente de
+// verdad del formato: si cambian, tienen que volver a correr.
+val vectores = layout.projectDirectory.dir("../vectores")
 
 tasks.test {
     useJUnitPlatform()
-    inputs.dir(vectoresDelContrato).withPropertyName("vectoresDelContrato")
-    systemProperty("midosis.vectores", vectoresDelContrato.asFile.absolutePath)
+    inputs.dir(vectores).withPropertyName("vectores")
+    systemProperty("midosis.vectores", vectores.asFile.absolutePath)
     finalizedBy(tasks.jacocoTestReport)
 }
 

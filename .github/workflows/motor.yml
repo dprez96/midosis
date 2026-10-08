@@ -3,7 +3,7 @@ name: motor
 on:
   push:
     branches: [main]
-    paths: ["motor/**", ".github/workflows/motor.yml"]
+    paths: ["motor/**", "contrato/**", ".github/workflows/motor.yml"]
   # En los pull requests corre siempre, aunque el cambio no toque este modulo:
   # es un check obligatorio de main, y un check obligatorio que no se ejecuta
   # deja el pull request bloqueado. Sin cambios en el modulo termina en segundos.
