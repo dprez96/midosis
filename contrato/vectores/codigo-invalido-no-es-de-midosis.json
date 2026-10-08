@@ -1,0 +1,11 @@
+{
+  "descripcion": "Un QR cualquiera, como el enlace de un sitio web.",
+  "ahora": 1786986000,
+  "codigo": "HTTPS://WWW.EJEMPLO.CL/PROMOCION",
+  "caracteres": 32,
+  "resultado": {
+    "valido": false,
+    "motivo": "no-es-de-midosis",
+    "regla": "prefijo"
+  }
+}

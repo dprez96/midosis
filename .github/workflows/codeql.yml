@@ -77,7 +77,7 @@ jobs:
       - name: Compilar los módulos Kotlin
         if: matrix.lenguaje == 'java-kotlin'
         run: |
-          for m in motor core paciente; do
+          for m in motor contrato/kotlin core paciente; do
             [ -f "$m/gradlew" ] || continue
             chmod +x "$m/gradlew"
             if grep -qs "com.android" "$m/build.gradle.kts" "$m/app/build.gradle.kts"; then

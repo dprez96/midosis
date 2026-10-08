@@ -1,13 +1,14 @@
 """
-Genera los vectores de prueba de la carga útil y de la cobertura del tramo.
+Genera los vectores de prueba de la carga útil, de la cobertura del tramo y de
+la pila completa del código (firma, compresión, cifrado y Base45).
 
 Es una implementación de referencia, escrita aparte de la de Kotlin a propósito:
 si core, paciente y el motor se probaran solo contra vectores producidos por su
 propio código, un error compartido pasaría inadvertido.
 
 Cada caso declara a mano el resultado que espera. El generador lo comprueba
-contra el esquema (carga-v1.cddl) y contra las reglas de carga-v1.md antes de
-escribir nada: si no coinciden, se detiene.
+contra el esquema (carga-v1.cddl), las reglas de carga-v1.md y la lectura de
+pila-v1.md antes de escribir nada: si no coinciden, se detiene.
 
 Uso, desde la raíz del repositorio:
 
@@ -28,6 +29,10 @@ from pathlib import Path
 
 import cbor2
 import pycddl
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+import pila
+from pila import ClaveDeContenido, ClaveDeFirma, Rechazo
 
 CONTRATO = Path(__file__).resolve().parent.parent
 ESQUEMA = CONTRATO / "esquema" / "carga-v1.cddl"
@@ -114,12 +119,6 @@ def sin(clave: str, d: dict) -> dict:
 # ---------------------------------------------------------------------------
 # Referencia: cómo debe leer la carga cualquier módulo
 # ---------------------------------------------------------------------------
-
-class Rechazo(Exception):
-    def __init__(self, motivo: str, regla: str):
-        super().__init__(f"{motivo}/{regla}")
-        self.motivo, self.regla = motivo, regla
-
 
 def _claves_repetidas(datos: bytes) -> bool:
     """Recorre el CBOR y dice si algún mapa repite una clave. cbor2 se queda con la última."""
@@ -531,6 +530,250 @@ def calcular_cobertura(du: int, e: int, f: str, retiro: str) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Claves de prueba
+# ---------------------------------------------------------------------------
+#
+# SOLO PARA PRUEBAS. Cada clave sale del SHA-256 de una frase pública, así que
+# cualquiera puede reconstruirla: no protegen nada y por eso pueden estar en el
+# repositorio. Sus identificadores empiezan con «prueba-», y la aplicación de
+# producción se niega a cargar un conjunto de claves que contenga alguno.
+
+def _semilla(frase: str) -> bytes:
+    return hashlib.sha256(frase.encode()).digest()
+
+
+def _clave_de_firma(kid: str, **datos) -> tuple[ClaveDeFirma, str]:
+    frase = f"MiDosis, clave de firma de prueba {kid}"
+    return ClaveDeFirma(kid=kid, privada=_semilla(frase), **datos), frase
+
+
+def _clave_de_contenido(kid: str) -> tuple[ClaveDeContenido, str]:
+    frase = f"MiDosis, clave de contenido de prueba {kid}"
+    return ClaveDeContenido(kid=kid, clave=_semilla(frase)), frase
+
+
+INICIO_2026 = 1767225600   # 01/01/2026 00:00 UTC
+SEPTIEMBRE_2026 = 1788220800  # 01/09/2026 00:00 UTC
+
+(FIRMA_1, FRASE_F1) = _clave_de_firma("prueba-1", comuna="13123", vigente_desde=INICIO_2026)
+(FIRMA_2, FRASE_F2) = _clave_de_firma("prueba-2", comuna="13123", vigente_desde=SEPTIEMBRE_2026)
+(FIRMA_REVOCADA, FRASE_FR) = _clave_de_firma("prueba-revocada", comuna="13123", vigente_desde=INICIO_2026,
+                                             revocada=True)
+(FIRMA_AJENA, FRASE_FA) = _clave_de_firma("prueba-desconocida", comuna="13123", vigente_desde=INICIO_2026)
+(CONTENIDO_1, FRASE_C1) = _clave_de_contenido("prueba-c1")
+(CONTENIDO_AJENA, FRASE_CA) = _clave_de_contenido("prueba-c9")
+
+# Lo que la aplicación de prueba trae empaquetado. Las «ajenas» no están.
+CONJUNTO_DE_FIRMA = {c.kid: c for c in (FIRMA_1, FIRMA_2, FIRMA_REVOCADA)}
+CONJUNTO_DE_CONTENIDO = {CONTENIDO_1.kid: CONTENIDO_1}
+
+
+def _claves_de_prueba() -> dict:
+    firma = []
+    for clave, frase in ((FIRMA_1, FRASE_F1), (FIRMA_2, FRASE_F2), (FIRMA_REVOCADA, FRASE_FR),
+                         (FIRMA_AJENA, FRASE_FA)):
+        firma.append({
+            "kid": clave.kid,
+            "frase": frase,
+            "privada": clave.privada.hex(),
+            "publica": clave.publica.hex(),
+            "comuna": clave.comuna,
+            "vigenteDesde": clave.vigente_desde,
+            "vigenteHasta": clave.vigente_hasta,
+            "revocada": clave.revocada,
+            "enElConjunto": clave.kid in CONJUNTO_DE_FIRMA,
+        })
+    contenido = [{"kid": c.kid, "frase": f, "clave": c.clave.hex(), "enElConjunto": c.kid in CONJUNTO_DE_CONTENIDO}
+                 for c, f in ((CONTENIDO_1, FRASE_C1), (CONTENIDO_AJENA, FRASE_CA))]
+    return {
+        "advertencia": "SOLO PRUEBAS. Cada clave es el SHA-256 de su frase, que es pública: no protegen nada. "
+                       "La aplicación de producción rechaza cualquier clave cuyo kid empiece con «prueba-».",
+        "firma": firma,
+        "contenido": contenido,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Casos de la pila completa
+# ---------------------------------------------------------------------------
+
+def _iv(nombre: str) -> bytes:
+    """En producción el IV es aleatorio; en los vectores, fijo para que sean reproducibles."""
+    return hashlib.sha256(f"iv {nombre}".encode()).digest()[:12]
+
+
+def _sign1_a_mano(protegida: dict, carga: bytes, firma: bytes) -> bytes:
+    return cbor2.dumps(cbor2.CBORTag(18, [cbor2.dumps(protegida), {}, carga, firma]))
+
+
+def _encrypt0_a_mano(protegida: dict, clave: ClaveDeContenido, iv: bytes, datos: bytes, etiqueta=True) -> bytes:
+    protegida_bytes = cbor2.dumps(protegida)
+    aad = cbor2.dumps(["Encrypt0", protegida_bytes, b""])
+    mensaje = [protegida_bytes, {4: clave.kid.encode(), 5: iv}, AESGCM(clave.clave).encrypt(iv, datos, aad)]
+    return cbor2.dumps(cbor2.CBORTag(16, mensaje) if etiqueta else mensaje)
+
+
+def _invertir_bit(datos: bytes, posicion: int) -> bytes:
+    b = bytearray(datos)
+    b[posicion] ^= 0x01
+    return bytes(b)
+
+
+def _capas(nombre: str, carga_util, firma=FIRMA_1, contenido=CONTENIDO_1, alterar_firmado=None,
+           alterar_cifrado=None, comprimido=None, cifrado=None) -> dict:
+    """Arma el código capa por capa. Los ganchos permiten dañar una capa a propósito."""
+    carga_bytes = carga_util if isinstance(carga_util, bytes) else cbor(carga_util)
+    firmado = pila.firmar(carga_bytes, firma)
+    if alterar_firmado:
+        firmado = alterar_firmado(firmado)
+    if comprimido is None:
+        comprimido = pila.comprimir(firmado)
+    iv = _iv(nombre)
+    if cifrado is None:
+        cifrado = pila.cifrar(comprimido, contenido, iv)
+    if alterar_cifrado:
+        cifrado = alterar_cifrado(cifrado)
+    return {
+        "codigo": pila.texto(cifrado),
+        "capas": {"carga": carga_bytes.hex(), "firmado": firmado.hex(), "comprimido": comprimido.hex(),
+                  "iv": iv.hex(), "cifrado": cifrado.hex()},
+    }
+
+
+def _carga_de(nombre: str) -> dict:
+    return next(c["carga"] for c in CASOS if c["nombre"] == nombre)
+
+
+IAT_2 = 1792022400  # 15/10/2026 00:00 UTC, dentro de la vigencia de prueba-2
+UNA_HORA = 3600
+
+
+def _casos_de_codigo() -> list[dict]:
+    losartan_ok = carga()
+    firmado_ok = pila.firmar(cbor(losartan_ok), FIRMA_1)
+    con_otra_carga = cbor(carga(losartan(e=90, co=45)))
+
+    def carga_cambiada(firmado: bytes) -> bytes:
+        # La misma firma, pero sobre otra carga: e pasa de 60 a 90.
+        valor = cbor2.loads(firmado).value
+        return cbor2.dumps(cbor2.CBORTag(18, [valor[0], valor[1], con_otra_carga, valor[3]]))
+
+    def a_otra_version(codigo: dict) -> dict:
+        return {**codigo, "codigo": "MD2:" + codigo["codigo"][len(pila.PREFIJO):]}
+
+    def con_caracter_invalido(codigo: dict) -> dict:
+        t = codigo["codigo"]
+        return {**codigo, "codigo": t[:20] + "a" + t[21:]}
+
+    sin_etiqueta = _encrypt0_a_mano({1: 3}, CONTENIDO_1, _iv("sin-etiqueta"), pila.comprimir(firmado_ok),
+                                    etiqueta=False)
+    algoritmo_cifrado = _encrypt0_a_mano({1: 1}, CONTENIDO_1, _iv("algoritmo-de-cifrado"), pila.comprimir(firmado_ok))
+    bomba = pila.comprimir(bytes(64 * 1024))
+
+    return [
+        dict(nombre="codigo-valido-losartan", ahora=IAT + UNA_HORA,
+             descripcion="El caso del informe, leído una hora después de emitido.",
+             **_capas("valido-losartan", losartan_ok),
+             resultado={"valido": True}),
+        dict(nombre="codigo-valido-varios-productos", ahora=IAT + UNA_HORA,
+             descripcion="Tres productos.",
+             **_capas("valido-varios-productos", _carga_de("valido-varios-productos")),
+             resultado={"valido": True}),
+        dict(nombre="codigo-valido-segunda-clave", ahora=IAT_2 + UNA_HORA,
+             descripcion="Firmado con prueba-2, la clave que reemplaza a prueba-1. Las dos conviven (ADR-013).",
+             **_capas("valido-segunda-clave", carga(iat=IAT_2, exp=IAT_2 + VIGENCIA_MAXIMA_S,
+                                                    jti=ulid(IAT_2, "segunda-clave")), firma=FIRMA_2),
+             resultado={"valido": True}),
+        dict(nombre="codigo-valido-a-un-segundo-de-expirar", ahora=EXP - 1,
+             descripcion="Un segundo antes de «exp» todavía se acepta.",
+             **_capas("valido-a-un-segundo", losartan_ok),
+             resultado={"valido": True}),
+        dict(nombre="codigo-valido-plan-maximo", ahora=IAT + UNA_HORA,
+             descripcion="Veinte productos. Demasiado para un QR impreso: es el caso del código corto.",
+             **_capas("valido-plan-maximo", _carga_de("limite-plan-maximo")),
+             resultado={"valido": True}),
+
+        dict(nombre="codigo-invalido-no-es-de-midosis", ahora=IAT + UNA_HORA,
+             descripcion="Un QR cualquiera, como el enlace de un sitio web.",
+             codigo="HTTPS://WWW.EJEMPLO.CL/PROMOCION",
+             resultado={"valido": False, "motivo": pila.NO_ES_DE_MIDOSIS, "regla": "prefijo"}),
+        dict(nombre="codigo-invalido-version-de-pila-futura", ahora=IAT + UNA_HORA,
+             descripcion="El prefijo MD2: es de una versión de la pila que esta aplicación no conoce.",
+             **a_otra_version(_capas("version-de-pila", losartan_ok)),
+             resultado={"valido": False, "motivo": pila.VERSION, "regla": "prefijo"}),
+        dict(nombre="codigo-invalido-base45", ahora=IAT + UNA_HORA,
+             descripcion="Una letra minúscula: no pertenece al alfabeto Base45.",
+             **con_caracter_invalido(_capas("base45", losartan_ok)),
+             resultado={"valido": False, "motivo": pila.ALTERADO, "regla": "base45"}),
+        dict(nombre="codigo-invalido-truncado", ahora=IAT + UNA_HORA,
+             descripcion="Al sobre cifrado le faltan sus dos últimos bytes, como en un código leído a medias.",
+             **_capas("truncado", losartan_ok, alterar_cifrado=lambda c: c[:-2]),
+             resultado={"valido": False, "motivo": pila.ALTERADO, "regla": "cose"}),
+        dict(nombre="codigo-invalido-sin-etiqueta-cose", ahora=IAT + UNA_HORA,
+             descripcion="El COSE_Encrypt0 llega sin su etiqueta CBOR 16.",
+             **_capas("sin-etiqueta", losartan_ok, cifrado=sin_etiqueta),
+             resultado={"valido": False, "motivo": pila.ALTERADO, "regla": "cose"}),
+        dict(nombre="codigo-invalido-algoritmo-de-cifrado", ahora=IAT + UNA_HORA,
+             descripcion="Cifrado con A128GCM en vez de A256GCM.",
+             **_capas("algoritmo-de-cifrado", losartan_ok, cifrado=algoritmo_cifrado),
+             resultado={"valido": False, "motivo": pila.ALTERADO, "regla": "algoritmo"}),
+        dict(nombre="codigo-invalido-clave-de-contenido-desconocida", ahora=IAT + UNA_HORA,
+             descripcion="Cifrado con una clave de contenido que la aplicación no trae: se pide actualizarla.",
+             **_capas("contenido-desconocido", losartan_ok, contenido=CONTENIDO_AJENA),
+             resultado={"valido": False, "motivo": pila.VERSION, "regla": "clave-de-contenido"}),
+        dict(nombre="codigo-invalido-cifrado-alterado", ahora=IAT + UNA_HORA,
+             descripcion="Un bit cambiado en el texto cifrado: falla la etiqueta de autenticación de GCM.",
+             **_capas("cifrado-alterado", losartan_ok, alterar_cifrado=lambda c: _invertir_bit(c, len(c) - 20)),
+             resultado={"valido": False, "motivo": pila.ALTERADO, "regla": "cifrado"}),
+        dict(nombre="codigo-invalido-descompresion-excesiva", ahora=IAT + UNA_HORA,
+             descripcion="64 KiB de ceros comprimidos en unos cien bytes. Se corta en el límite de 8 KiB.",
+             **_capas("descompresion", losartan_ok, comprimido=bomba),
+             resultado={"valido": False, "motivo": pila.ALTERADO, "regla": "descompresion"}),
+        dict(nombre="codigo-invalido-algoritmo-de-firma", ahora=IAT + UNA_HORA,
+             descripcion="La cabecera protegida declara ES256 en vez de EdDSA.",
+             **_capas("algoritmo-de-firma", losartan_ok,
+                      alterar_firmado=lambda f: _sign1_a_mano({1: -7, 4: b"prueba-1"}, cbor(losartan_ok), bytes(64))),
+             resultado={"valido": False, "motivo": pila.ALTERADO, "regla": "algoritmo"}),
+        dict(nombre="codigo-invalido-emisor-desconocido", ahora=IAT + UNA_HORA,
+             descripcion="Firmado con una clave que no está en el conjunto de la aplicación.",
+             **_capas("emisor-desconocido", losartan_ok, firma=FIRMA_AJENA),
+             resultado={"valido": False, "motivo": pila.EMISOR_DESCONOCIDO, "regla": "clave-desconocida"}),
+        dict(nombre="codigo-invalido-clave-revocada", ahora=IAT + UNA_HORA,
+             descripcion="Firmado con una clave que la aplicación conoce, pero marcada como revocada.",
+             **_capas("clave-revocada", losartan_ok, firma=FIRMA_REVOCADA),
+             resultado={"valido": False, "motivo": pila.EMISOR_DESCONOCIDO, "regla": "clave-revocada"}),
+        dict(nombre="codigo-invalido-firma-alterada", ahora=IAT + UNA_HORA,
+             descripcion="Un bit cambiado en la firma.",
+             **_capas("firma-alterada", losartan_ok, alterar_firmado=lambda f: _invertir_bit(f, len(f) - 1)),
+             resultado={"valido": False, "motivo": pila.ALTERADO, "regla": "firma"}),
+        dict(nombre="codigo-invalido-carga-alterada", ahora=IAT + UNA_HORA,
+             descripcion="Se cambió «e» de 60 a 90 después de firmar, conservando la firma original.",
+             **_capas("carga-alterada", losartan_ok, alterar_firmado=carga_cambiada),
+             resultado={"valido": False, "motivo": pila.ALTERADO, "regla": "firma"}),
+        dict(nombre="codigo-invalido-version-de-carga-futura", ahora=IAT + UNA_HORA,
+             descripcion="Firma válida sobre una carga de la versión 2.",
+             **_capas("version-de-carga", carga(v=2)),
+             resultado={"valido": False, "motivo": VERSION, "regla": "version"}),
+        dict(nombre="codigo-invalido-carga-incoherente", ahora=IAT + UNA_HORA,
+             descripcion="Firma válida sobre una carga cuya cobertura no cuadra: el error es del emisor.",
+             **_capas("carga-incoherente", carga(losartan(co=31))),
+             resultado={"valido": False, "motivo": CONTENIDO, "regla": "cobertura"}),
+        dict(nombre="codigo-invalido-clave-de-otra-comuna", ahora=IAT + UNA_HORA,
+             descripcion="La clave de la comuna 13123 firma un código de la comuna 13101.",
+             **_capas("otra-comuna", carga(cm="13101", iss="CL-FP-13101-01")),
+             resultado={"valido": False, "motivo": pila.EMISOR_DESCONOCIDO, "regla": "comuna-de-la-clave"}),
+        dict(nombre="codigo-invalido-clave-fuera-de-vigencia", ahora=IAT + UNA_HORA,
+             descripcion="Firmado con prueba-2, que rige desde el 01/09/2026, un código emitido el 17/08/2026.",
+             **_capas("fuera-de-vigencia", losartan_ok, firma=FIRMA_2),
+             resultado={"valido": False, "motivo": pila.EMISOR_DESCONOCIDO, "regla": "clave-fuera-de-vigencia"}),
+        dict(nombre="codigo-invalido-expirado", ahora=EXP,
+             descripcion="Leído justo en «exp»: la vigencia de 72 horas ya terminó (RN-03).",
+             **_capas("expirado", losartan_ok),
+             resultado={"valido": False, "motivo": pila.EXPIRADO, "regla": "vigencia"}),
+    ]
+
+
+# ---------------------------------------------------------------------------
 # Escritura
 # ---------------------------------------------------------------------------
 
@@ -570,6 +813,26 @@ def construir() -> dict[str, str]:
                        "La fecha de agotamiento es la del retiro más co días.",
         "casos": COBERTURA,
     })
+
+    archivos["claves-de-prueba.json"] = _json(_claves_de_prueba())
+
+    def leer_carga(datos: bytes) -> dict:
+        return leer(datos, esquema)
+
+    for caso in _casos_de_codigo():
+        try:
+            pila.leer_codigo(caso["codigo"], CONJUNTO_DE_FIRMA, CONJUNTO_DE_CONTENIDO, caso["ahora"], leer_carga)
+            obtenido = {"valido": True}
+        except Rechazo as r:
+            obtenido = {"valido": False, "motivo": r.motivo, "regla": r.regla}
+        if obtenido != caso["resultado"]:
+            raise SystemExit(f"{caso['nombre']}: se esperaba {caso['resultado']} y la referencia dio {obtenido}")
+        vector = {"descripcion": caso["descripcion"], "ahora": caso["ahora"], "codigo": caso["codigo"],
+                  "caracteres": len(caso["codigo"])}
+        if "capas" in caso:
+            vector["capas"] = caso["capas"]
+        vector["resultado"] = caso["resultado"]
+        archivos[f"{caso['nombre']}.json"] = _json(vector)
     return archivos
 
 

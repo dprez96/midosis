@@ -118,8 +118,8 @@ Las reglas 9 a 14 se aplican a cada producto, en el orden de `rx`.
 
 Esta lectura viene después de verificar la firma: un código que llega aquí lo
 emitió una farmacia habilitada, así que un rechazo delata un error del emisor y no
-un ataque. La expiración respecto de la hora actual, la firma y el emisor
-desconocido son de la HU-09 y tienen sus propios motivos.
+un ataque. La firma, el emisor y la expiración respecto de la hora actual están en
+[pila-v1.md](pila-v1.md), con sus propios motivos.
 
 ## Diferencias con el ejemplo del informe
 
