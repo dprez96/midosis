@@ -68,7 +68,9 @@ La sesión usa `@firebase/app` y `@firebase/auth` directamente, no el paquete
 `firebase` completo: ese arrastra Firestore y su cliente gRPC, que la aplicación no
 usa y que trae vulnerabilidades ajenas a ella. Las dos se actualizan juntas.
 
-`jsdom` está en la versión 29 porque la 30 exige Node 22.22 o posterior.
+`jsdom` está en la versión 29 porque la 30 exige Node 22.22 o posterior, y
+`@types/node` en la 22, la versión de Node con que corren Vite y las pruebas: con los
+tipos de una posterior, el editor aceptaría funciones que Node 22 no tiene.
 
 ## Impresora térmica
 

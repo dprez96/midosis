@@ -1,0 +1,14 @@
+{
+  "descripcion": "La raíz es un arreglo y no un mapa.",
+  "carga": [
+    1,
+    "13123"
+  ],
+  "cbor": "8201653133313233",
+  "bytes": 8,
+  "resultado": {
+    "valido": false,
+    "motivo": "estructura-invalida",
+    "regla": "no-es-mapa"
+  }
+}
