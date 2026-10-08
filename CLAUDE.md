@@ -110,7 +110,9 @@ hay código de persistencia sin esas pruebas.
   `core/` fallan con "Could not find a valid Docker environment".
 - **JDK.** Los módulos de Gradle declaran el JDK 21 como toolchain y el resolutor
   Foojay lo descarga si falta. Instalar solo el JRE no basta para compilar.
-- **`farmacia/` fija dos versiones a propósito.** TypeScript 6.0, porque
-  typescript-eslint no soporta la 7, y jsdom 29, porque la 30 exige Node 22.22. Usa
+- **`farmacia/` fija tres versiones a propósito.** TypeScript 6.0, porque
+  typescript-eslint no soporta la 7; jsdom 29, porque la 30 exige Node 22.22, y
+  `@types/node` 22, porque los tipos deben ser los del Node que usamos. Dependabot
+  respeta las tres (`.github/dependabot.yml`). Usa
   `@firebase/app` y `@firebase/auth`, no el paquete `firebase`, que arrastra Firestore
   con vulnerabilidades de gRPC que la web no usa.
