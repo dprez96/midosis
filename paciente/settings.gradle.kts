@@ -26,3 +26,5 @@ include(":app")
 // El motor de planificación se compila desde su código fuente: el teléfono usa
 // exactamente la misma lógica que core (ADR-007).
 includeBuild("../motor")
+// El formato del código se lee con la misma implementación con que core lo emite.
+includeBuild("../contrato/kotlin")

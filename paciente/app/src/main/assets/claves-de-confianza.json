@@ -1,0 +1,5 @@
+{
+  "descripcion": "Claves de producción con que la aplicación verifica los códigos sin conexión (ADR-013). Vacío hasta que core emita con Cloud KMS (HU-01): mientras tanto, la compilación de producción no acepta ningún código.",
+  "emisores": [],
+  "contenido": []
+}
