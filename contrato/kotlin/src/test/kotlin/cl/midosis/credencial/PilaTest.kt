@@ -77,6 +77,37 @@ class PilaTest {
     }
 
     @Test
+    fun `ningún código dañado hace fallar la lectura con una excepción`() {
+        // Un QR hostil no puede botar la aplicación: siempre hay un resultado. Se dañan
+        // tanto el texto como cada capa, y se vuelve a armar lo que está por encima.
+        val capas = Vectores.leer("codigo-valido-losartan.json").get("capas")
+        val emisor = EmisorDeCodigos(Vectores.firmante("prueba-1"), Vectores.contenido("prueba-c1"))
+        val lector = LectorDeCodigos(claves) { 1786986000 }
+        val azar = java.util.Random(20261016)
+        val texto = Vectores.leer("codigo-valido-losartan.json").get("codigo").asString()
+
+        fun danar(datos: ByteArray): ByteArray {
+            val copia = datos.copyOf(if (azar.nextInt(4) == 0) azar.nextInt(datos.size + 1) else datos.size)
+            repeat(1 + azar.nextInt(3)) { if (copia.isNotEmpty()) copia[azar.nextInt(copia.size)] = azar.nextInt(256).toByte() }
+            return copia
+        }
+
+        repeat(3000) { i ->
+            val codigo = when (i % 4) {
+                0 -> texto.substring(0, azar.nextInt(texto.length + 1)) + Base45.codificar(ByteArray(azar.nextInt(6)) { azar.nextInt(256).toByte() })
+                1 -> "MD1:" + Base45.codificar(danar(hex(capas.get("cifrado").asString())))
+                2 -> "MD1:" + Base45.codificar(emisor.cifrar(danar(hex(capas.get("comprimido").asString()))))
+                else -> "MD1:" + Base45.codificar(emisor.cifrar(emisor.comprimir(danar(hex(capas.get("firmado").asString())))))
+            }
+            val lectura = lector.leer(codigo)
+            if (lectura is Lectura.Aceptado) {
+                // Solo se acepta si, pese al daño, la carga firmada quedó intacta.
+                assertEquals(capas.get("carga").asString(), CodecDeCarga.codificar(lectura.carga).hex())
+            }
+        }
+    }
+
+    @Test
     fun `cabe en el QR del comprobante`() {
         // 25 mm o más a 0,40 mm por módulo (tabla 87). Con corrección M, la versión 15
         // admite 567 caracteres alfanuméricos y mide 77 módulos: unos 31 mm.
