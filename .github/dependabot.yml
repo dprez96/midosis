@@ -41,6 +41,10 @@ updates:
       # typescript-eslint todavía no soporta TypeScript 6.1 ni la 7.
       - dependency-name: typescript
         versions: [">=6.1"]
+      # Los tipos de Node deben coincidir con el Node que usamos, el 22: con los de una
+      # versión posterior, el editor aceptaría funciones que Node 22 no tiene.
+      - dependency-name: "@types/node"
+        versions: [">=23"]
 
   - package-ecosystem: npm
     directory: /infra/firebase
