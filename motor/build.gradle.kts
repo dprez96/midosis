@@ -32,7 +32,7 @@ kotlin {
 dependencies {
     testImplementation(kotlin("test"))
     // Solo para leer los vectores de contrato/ en las pruebas; la biblioteca no la usa.
-    testImplementation("tools.jackson.core:jackson-databind:3.1.5")
+    testImplementation("tools.jackson.core:jackson-databind:3.2.3")
     testImplementation(platform("org.junit:junit-bom:6.1.3"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
