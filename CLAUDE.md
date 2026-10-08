@@ -36,6 +36,9 @@ Las que más condicionan el código:
 - El aislamiento entre comunas se refuerza en PostgreSQL con seguridad a nivel de
   fila, no solo en la consulta (ADR-011). La aplicación se conecta con un usuario
   sin privilegios de dueño: el dueño de la tabla se salta las políticas.
+- Las alarmas de toma usan `AlarmManager.setAlarmClock`, no
+  `setExactAndAllowWhileIdle`: en el ahorro profundo, Android limita la frecuencia
+  de esta última (ADR-015).
 
 ## Reglas de trabajo
 
