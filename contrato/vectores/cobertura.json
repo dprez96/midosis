@@ -1,0 +1,145 @@
+{
+  "descripcion": "Cobertura del tramo entregado (ADR-010): co = piso(e × f / 1 día). La fecha de agotamiento es la del retiro más co días.",
+  "casos": [
+    {
+      "nombre": "losartan-del-informe",
+      "du": 180,
+      "e": 60,
+      "f": "PT12H",
+      "retiro": "2026-08-17",
+      "esperado": {
+        "co": 30,
+        "agotamiento": "2026-09-16",
+        "completaLoIndicado": false,
+        "diasPendientes": 150,
+        "excedeLoIndicado": false
+      }
+    },
+    {
+      "nombre": "uno-diario-de-la-hu-04",
+      "du": 180,
+      "e": 60,
+      "f": "PT24H",
+      "retiro": "2026-10-15",
+      "esperado": {
+        "co": 60,
+        "agotamiento": "2026-12-14",
+        "completaLoIndicado": false,
+        "diasPendientes": 120,
+        "excedeLoIndicado": false
+      }
+    },
+    {
+      "nombre": "completa-justo-lo-indicado",
+      "du": 30,
+      "e": 90,
+      "f": "PT8H",
+      "retiro": "2026-10-15",
+      "esperado": {
+        "co": 30,
+        "agotamiento": "2026-11-14",
+        "completaLoIndicado": true,
+        "diasPendientes": 0,
+        "excedeLoIndicado": false
+      }
+    },
+    {
+      "nombre": "entrega-de-mas",
+      "du": 7,
+      "e": 30,
+      "f": "PT24H",
+      "retiro": "2026-10-15",
+      "esperado": {
+        "co": 30,
+        "agotamiento": "2026-11-14",
+        "completaLoIndicado": true,
+        "diasPendientes": 0,
+        "excedeLoIndicado": true
+      }
+    },
+    {
+      "nombre": "redondea-hacia-abajo",
+      "du": 10,
+      "e": 20,
+      "f": "PT8H",
+      "retiro": "2026-10-15",
+      "esperado": {
+        "co": 6,
+        "agotamiento": "2026-10-21",
+        "completaLoIndicado": false,
+        "diasPendientes": 4,
+        "excedeLoIndicado": false
+      }
+    },
+    {
+      "nombre": "menos-de-un-dia",
+      "du": 1,
+      "e": 1,
+      "f": "PT12H",
+      "retiro": "2026-10-15",
+      "esperado": {
+        "co": 0,
+        "agotamiento": "2026-10-15",
+        "completaLoIndicado": false,
+        "diasPendientes": 1,
+        "excedeLoIndicado": false
+      }
+    },
+    {
+      "nombre": "intervalo-con-minutos",
+      "du": 3,
+      "e": 16,
+      "f": "PT1H30M",
+      "retiro": "2026-10-15",
+      "esperado": {
+        "co": 1,
+        "agotamiento": "2026-10-16",
+        "completaLoIndicado": false,
+        "diasPendientes": 2,
+        "excedeLoIndicado": false
+      }
+    },
+    {
+      "nombre": "semanal",
+      "du": 84,
+      "e": 4,
+      "f": "PT168H",
+      "retiro": "2026-10-15",
+      "esperado": {
+        "co": 28,
+        "agotamiento": "2026-11-12",
+        "completaLoIndicado": false,
+        "diasPendientes": 56,
+        "excedeLoIndicado": false
+      }
+    },
+    {
+      "nombre": "cruza-un-29-de-febrero",
+      "du": 90,
+      "e": 30,
+      "f": "PT24H",
+      "retiro": "2028-02-01",
+      "esperado": {
+        "co": 30,
+        "agotamiento": "2028-03-02",
+        "completaLoIndicado": false,
+        "diasPendientes": 60,
+        "excedeLoIndicado": false
+      }
+    },
+    {
+      "nombre": "cruza-el-fin-de-ano",
+      "du": 60,
+      "e": 30,
+      "f": "PT24H",
+      "retiro": "2026-12-20",
+      "esperado": {
+        "co": 30,
+        "agotamiento": "2027-01-19",
+        "completaLoIndicado": false,
+        "diasPendientes": 30,
+        "excedeLoIndicado": false
+      }
+    }
+  ]
+}

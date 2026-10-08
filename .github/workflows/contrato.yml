@@ -1,0 +1,32 @@
+name: contrato
+
+# Comprueba que los vectores de prueba de contrato/ coinciden con lo que produce
+# el generador de referencia. No es un check obligatorio de main: solo corre
+# cuando cambia el contrato.
+on:
+  push:
+    branches: [main]
+    paths: ["contrato/**", ".github/workflows/contrato.yml"]
+  pull_request:
+    paths: ["contrato/**", ".github/workflows/contrato.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  vectores:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: contrato/herramientas/requirements.txt
+
+      - name: Instalar el generador
+        run: pip install -r contrato/herramientas/requirements.txt
+
+      - name: Comprobar que los vectores están al día
+        run: python contrato/herramientas/generar_vectores.py --comprobar
