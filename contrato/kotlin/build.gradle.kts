@@ -36,7 +36,7 @@ dependencies {
     implementation("org.bouncycastle:bcprov-jdk18on:1.86")
 
     testImplementation(kotlin("test"))
-    testImplementation("tools.jackson.core:jackson-databind:3.1.5")
+    testImplementation("tools.jackson.core:jackson-databind:3.2.3")
     testImplementation(platform("org.junit:junit-bom:6.1.3"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
