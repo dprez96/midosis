@@ -26,11 +26,22 @@ android {
 
     buildFeatures {
         compose = true
+        // BuildConfig.DEBUG decide si se admiten las claves de prueba.
+        buildConfig = true
+    }
+
+    // Las pruebas en la computadora leen los vectores de contrato/vectores.
+    testOptions {
+        unitTests.all {
+            it.systemProperty("midosis.vectores", rootProject.file("../contrato/vectores").absolutePath)
+            it.inputs.dir(rootProject.file("../contrato/vectores")).withPropertyName("vectoresDelContrato")
+        }
     }
 }
 
 dependencies {
     implementation("cl.midosis:motor")
+    implementation("cl.midosis:credencial")
 
     implementation(platform("androidx.compose:compose-bom:2026.09.00"))
     implementation("androidx.compose.material3:material3")
@@ -41,6 +52,8 @@ dependencies {
 
     testImplementation("junit:junit:4.13.2")
     testImplementation(kotlin("test-junit"))
+    // Android trae org.json, pero en las pruebas de la computadora solo hay esqueletos.
+    testImplementation("org.json:json:20260814")
 
     // Pruebas que corren en un teléfono real: lo que depende del almacén de claves de
     // Android no se puede probar en la computadora.
