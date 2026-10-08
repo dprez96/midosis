@@ -14,6 +14,10 @@
 # GitHub pide revisión a ambos. Que los dos aprueben es un acuerdo del equipo;
 # la protección de main solo obliga a una aprobación.
 #
+# contrato/ lista tres dueños: como los pull requests salen de la cuenta de
+# Daniel, con dos GitHub pediría revisión a una sola persona, y el formato del
+# código exige dos revisores (CONTRIBUTING.md).
+#
 # Las reglas posteriores prevalecen sobre las anteriores.
 
 *                             @dprez96
@@ -23,7 +27,7 @@
 /paciente/                    @WladimirPro
 /motor/                       @sebvvs @WladimirPro
 
-/contrato/                    @dprez96 @sebvvs
+/contrato/                    @dprez96 @sebvvs @WladimirPro
 /infra/                       @dprez96 @sebvvs
 /.github/                     @dprez96 @sebvvs
 /docs/adr/                    @dprez96 @sebvvs
