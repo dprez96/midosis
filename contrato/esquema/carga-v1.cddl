@@ -1,0 +1,78 @@
+; Carga útil del código de tratamiento, versión 1 (CDDL, RFC 8610).
+;
+; Es la definición normativa de la estructura. Lo que CDDL no puede expresar,
+; como el dígito verificador del GTIN o que la cobertura cuadre con las dosis
+; entregadas, está en carga-v1.md con el nombre de cada regla.
+;
+; Los mapas son cerrados: una clave que no figura aquí invalida la carga. Así
+; ningún dato del paciente puede viajar en el código sin cambiar este archivo
+; (RNF-13, ADR-002).
+;
+; Los límites de texto (.size) se cuentan en bytes UTF-8, no en caracteres.
+
+carga = {
+  v: 1,                          ; versión del esquema
+  cm: codigo-comuna,             ; comuna emisora
+  iss: punto-de-dispensacion,    ; quien emite
+  jti: ulid,                     ; identificador del tratamiento
+  iat: instante,                 ; emisión
+  exp: instante,                 ; fin de la vigencia del canje (RN-03)
+  rx: [1*20 producto],           ; productos del tratamiento
+  ? rp: ulid,                    ; tratamiento que este código reemplaza (RN-25)
+}
+
+producto = {
+  c: gtin,                       ; código del producto
+  n: tstr .size (1..40),         ; etiqueta corta de respaldo
+  a: tstr .size (1..60),         ; principio activo
+  d: tstr .size (1..40),         ; dosis por toma, como se indicó
+  f: intervalo,                  ; intervalo entre tomas
+  du: 1..365,                    ; duración indicada, en días
+  e: 1..9999,                    ; dosis entregadas en este retiro
+  co: 0..9999,                   ; días que cubre lo entregado
+  r: via,                        ; vía de administración
+  ? o: [1*5 observacion],        ; observaciones codificadas
+  ? nt: tstr .size (1..240),     ; nota del químico farmacéutico
+}
+
+; Identificador único territorial del INE.
+codigo-comuna = tstr .regexp "^[0-9]{5}$"
+
+; País, tipo de establecimiento (farmacia popular), comuna y número del local.
+punto-de-dispensacion = tstr .regexp "^CL-FP-[0-9]{5}-[0-9]{2}$"
+
+; ULID canónico: 26 caracteres en Crockford Base32, en mayúsculas.
+ulid = tstr .regexp "^[0-7][0-9A-HJKMNP-TV-Z]{25}$"
+
+; Segundos desde el 1 de enero de 1970, en UTC.
+instante = uint
+
+; GTIN-8, GTIN-12, GTIN-13 o GTIN-14, como texto para conservar los ceros iniciales.
+gtin = tstr .regexp "^([0-9]{8}|[0-9]{12,14})$"
+
+; Duración ISO 8601 en su forma canónica: horas y minutos, sin días, semanas ni
+; meses, y sin componentes en cero. PT12H, PT24H, PT1H30M, PT45M.
+intervalo = tstr .regexp "^PT(?:[1-9][0-9]*H(?:[1-9]M|[1-5][0-9]M)?|(?:[1-9]|[1-5][0-9])M)$"
+
+via = "VO"    ; oral
+    / "SL"    ; sublingual
+    / "TOP"   ; tópica, sobre la piel
+    / "TD"    ; transdérmica, con parche
+    / "OFT"   ; oftálmica
+    / "OTI"   ; ótica
+    / "NAS"   ; nasal
+    / "INH"   ; inhalatoria
+    / "REC"   ; rectal
+    / "VAG"   ; vaginal
+    / "SC"    ; subcutánea
+    / "IM"    ; intramuscular
+
+; 1 en ayunas
+; 2 con alimentos
+; 3 al acostarse
+; 4 no partir ni masticar
+; 5 agitar antes de usar
+;
+; Va como rango y no como elección de constantes con nombre porque el validador
+; de referencia (pycddl 0.6) rechaza esa forma dentro de un arreglo.
+observacion = 1..5

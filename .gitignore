@@ -21,6 +21,10 @@ local.properties
 .cxx/
 captures/
 
+# Python (generador de vectores del contrato)
+__pycache__/
+.venv/
+
 # Node
 node_modules/
 .next/

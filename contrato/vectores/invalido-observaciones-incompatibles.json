@@ -1,0 +1,36 @@
+{
+  "descripcion": "En ayunas y con alimentos a la vez.",
+  "carga": {
+    "v": 1,
+    "cm": "13123",
+    "iss": "CL-FP-13123-01",
+    "jti": "01M0877000WQNC8FHDYAA6Y83C",
+    "iat": 1786982400,
+    "exp": 1787241600,
+    "rx": [
+      {
+        "c": "7802250012344",
+        "n": "Losartán 50 mg comp.",
+        "a": "Losartán",
+        "d": "1 comprimido",
+        "f": "PT12H",
+        "du": 180,
+        "e": 60,
+        "co": 30,
+        "r": "VO",
+        "o": [
+          1,
+          2
+        ],
+        "nt": "No suspender sin indicación médica"
+      }
+    ]
+  },
+  "cbor": "a761760162636d65313331323362727881ab6161694c6f73617274c3a16e61636d3738303232353030313233343461646c3120636f6d7072696d69646f6165183c6166655054313248616e754c6f73617274c3a16e203530206d6720636f6d702e616f820102617262564f62636f181e62647518b4626e7478244e6f2073757370656e6465722073696e20696e646963616369c3b36e206dc3a964696361636578701a6a872480636961741a6a833000636973736e434c2d46502d31333132332d3031636a7469781a30314d3038373730303057514e43384648445941413659383343",
+  "bytes": 227,
+  "resultado": {
+    "valido": false,
+    "motivo": "contenido-incoherente",
+    "regla": "observaciones-compatibles"
+  }
+}
