@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { ErrorDeApi } from '../api/cliente'
-import { catalogoFalso, CODIGO_FUERA_DEL_CATALOGO, losartan, metformina } from '../test/datos'
+import { catalogoFalso, clonazepam, CODIGO_FUERA_DEL_CATALOGO, losartan, metformina } from '../test/datos'
 import { PantallaMeson } from './PantallaMeson'
 
 /** El lector HID «escribe» el código y termina con Enter en el campo que tenga el foco. */
@@ -113,5 +113,23 @@ describe('PantallaMeson (HU-02)', () => {
 
     expect(lineas().queryByText('Losartán 50 mg')).not.toBeInTheDocument()
     expect(screen.getByText('Se quitó Losartán 50 mg de la atención.')).toBeInTheDocument()
+  })
+})
+
+describe('PantallaMeson (HU-06)', () => {
+  it('avisa que un producto con control legal irá sin nombre en el comprobante', async () => {
+    const usuario = userEvent.setup()
+    render(<PantallaMeson puedeGuardarPlantillas={false} api={catalogoFalso([losartan, clonazepam])} />)
+
+    await escanear(usuario, losartan.gtin)
+    await lineas().findByText('Losartán 50 mg')
+    await escanear(usuario, clonazepam.gtin)
+    await lineas().findByText('Clonazepam 0,5 mg')
+
+    // Es la segunda línea: la referencia lleva su número.
+    expect(lineas().getByText('Psicotrópico, DS 405 de 1983.')).toBeInTheDocument()
+    expect(lineas().getByText(/Medicamento 2 \(ver detalle en la aplicación MiDosis\)/)).toBeInTheDocument()
+    // El losartán no lleva el aviso.
+    expect(lineas().getAllByText(/En el comprobante figurará como/)).toHaveLength(1)
   })
 })

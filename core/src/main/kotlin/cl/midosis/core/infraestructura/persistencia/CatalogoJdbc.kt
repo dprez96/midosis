@@ -1,6 +1,7 @@
 package cl.midosis.core.infraestructura.persistencia
 
 import cl.midosis.core.dominio.catalogo.CatalogoDeProductos
+import cl.midosis.core.dominio.catalogo.ControlLegal
 import cl.midosis.core.dominio.catalogo.Gtin
 import cl.midosis.core.dominio.catalogo.Producto
 import cl.midosis.core.dominio.catalogo.TerminoDeBusqueda
@@ -25,6 +26,7 @@ class CatalogoJdbc(private val jdbc: JdbcClient) : CatalogoDeProductos {
             principioActivo = rs.getString("principio_activo"),
             forma = rs.getString("forma"),
             concentracion = rs.getString("concentracion"),
+            controlLegal = rs.getString("control_legal")?.let(ControlLegal::de),
         )
     }
 
@@ -68,13 +70,14 @@ class CatalogoJdbc(private val jdbc: JdbcClient) : CatalogoDeProductos {
     override fun guardar(producto: Producto) {
         jdbc.sql(
             """
-            INSERT INTO producto (comuna, gtin, nombre, principio_activo, forma, concentracion)
-            VALUES (:comuna, :gtin, :nombre, :principio, :forma, :concentracion)
+            INSERT INTO producto (comuna, gtin, nombre, principio_activo, forma, concentracion, control_legal)
+            VALUES (:comuna, :gtin, :nombre, :principio, :forma, :concentracion, :controlLegal)
             ON CONFLICT (comuna, gtin) DO UPDATE SET
                 nombre = EXCLUDED.nombre,
                 principio_activo = EXCLUDED.principio_activo,
                 forma = EXCLUDED.forma,
-                concentracion = EXCLUDED.concentracion
+                concentracion = EXCLUDED.concentracion,
+                control_legal = EXCLUDED.control_legal
             """.trimIndent()
         )
             .param("comuna", producto.comuna.valor)
@@ -83,6 +86,7 @@ class CatalogoJdbc(private val jdbc: JdbcClient) : CatalogoDeProductos {
             .param("principio", producto.principioActivo)
             .param("forma", producto.forma)
             .param("concentracion", producto.concentracion)
+            .param("controlLegal", producto.controlLegal?.codigo)
             .update()
     }
 
