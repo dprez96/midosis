@@ -1,6 +1,7 @@
 import { detalleDeProducto, type Producto } from '../dominio/catalogo'
 import type { Posologia } from '../dominio/posologia'
 import type { Tramo } from '../dominio/tramo'
+import { viaSugerida, type CodigoVia } from '../dominio/emision'
 
 /**
  * La atención en curso en el mesón: los productos ya identificados, su posología y el
@@ -20,6 +21,8 @@ export interface Linea {
   plantillaId: string | null
   /** Lo que se entrega en este retiro (HU-04). Null mientras no se registre. */
   tramo: Tramo | null
+  /** Vía de administración: la sugiere la forma farmacéutica y la confirma el auxiliar. */
+  via: CodigoVia
 }
 
 export interface Aviso {
@@ -37,6 +40,8 @@ export type Accion =
   | { tipo: 'identificado'; producto: Producto }
   | { tipo: 'posologia'; id: number; posologia: Posologia | null; plantillaId: string | null }
   | { tipo: 'tramo'; id: number; tramo: Tramo }
+  | { tipo: 'via'; id: number; via: CodigoVia }
+  | { tipo: 'nueva' }
   | { tipo: 'quitar'; id: number }
   | { tipo: 'avisar'; aviso: Aviso | null }
 
@@ -50,7 +55,7 @@ export function reducirAtencion(estado: Atencion, accion: Accion): Atencion {
         return { ...estado, aviso: { tipo: 'info', texto: `${producto.nombre} ya está en esta atención.` } }
       }
       return {
-        lineas: [...estado.lineas, { id: estado.siguienteId, producto, posologia: null, plantillaId: null, tramo: null }],
+        lineas: [...estado.lineas, { id: estado.siguienteId, producto, posologia: null, plantillaId: null, tramo: null, via: viaSugerida(producto.forma) }],
         siguienteId: estado.siguienteId + 1,
         aviso: { tipo: 'exito', texto: `Identificado: ${producto.nombre}. ${detalleDeProducto(producto)}.` },
       }
@@ -67,6 +72,13 @@ export function reducirAtencion(estado: Atencion, accion: Accion): Atencion {
         ...estado,
         lineas: estado.lineas.map((linea) => (linea.id === accion.id ? { ...linea, tramo: accion.tramo } : linea)),
       }
+    case 'via':
+      return {
+        ...estado,
+        lineas: estado.lineas.map((linea) => (linea.id === accion.id ? { ...linea, via: accion.via } : linea)),
+      }
+    case 'nueva':
+      return ATENCION_NUEVA
     case 'quitar': {
       const quitada = estado.lineas.find((linea) => linea.id === accion.id)
       if (!quitada) return estado
