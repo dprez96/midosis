@@ -69,3 +69,18 @@ gcloud auth application-default set-quota-project midosis-desarrollo
 No se descargan claves de cuenta de servicio: son secretos permanentes y, si se filtran, hay
 que revocarlos.
 
+
+## Demostración de punta a punta
+
+Con la base y core corriendo como arriba, `infra/local/demo/preparar_demo.py` deja dos
+tratamientos sintéticos recién emitidos con las claves de prueba del contrato: un QR en
+`infra/local/demo/salida/qr-demo.png`, para escanearlo con la cámara, y un código corto con
+su PIN registrado en la base, para cargarlo a mano (HU-10). Vencen a las 72 horas; se puede
+correr cuantas veces haga falta.
+
+```bash
+python infra/local/demo/preparar_demo.py   # con el entorno de contrato/herramientas
+adb reverse tcp:8080 tcp:8080              # el teléfono llega a core en 127.0.0.1
+```
+
+La aplicación de depuración acepta esas claves; la de producción, no.
