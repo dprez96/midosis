@@ -13,6 +13,9 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <!-- Reprogramar las alarmas al encender el teléfono: Android las borra al apagarse. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Leer el código del comprobante (HU-11). La imagen se analiza en el teléfono y no se guarda. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" />
 
     <application
         android:name=".AplicacionMiDosis"

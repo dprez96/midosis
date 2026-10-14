@@ -51,46 +51,26 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 /**
- * Pantalla de prueba de alarmas (HU-15). La pantalla del paciente llega con la carga de
- * tratamientos desde el código (HU-08); esta sirve para verificar en teléfonos reales que
- * las alarmas suenan a tiempo y para alimentar el banco de dispositivos. En la compilación
- * de depuración trae además la prueba de verificación de códigos (HU-09).
+ * La actividad de la aplicación del paciente (AppPaciente). Las pruebas de alarmas del banco
+ * de dispositivos y de códigos quedan en «Herramientas de prueba», solo en depuración.
  */
 class PantallaPrincipal : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme {
-                Surface {
-                    val contexto = LocalContext.current
-                    val almacen = remember { AlmacenDeRutina(contexto) }
-                    var guardada by remember { mutableStateOf(almacen.leer()) }
-                    var entrevista by remember { mutableStateOf<Entrevista?>(null) }
-
-                    val abierta = entrevista
-                    if (abierta != null) {
-                        EntrevistaDeRutina(
-                            inicial = abierta,
-                            alTerminar = { rutina ->
-                                RutinaGuardada(rutina, porDefecto = false).also { almacen.guardar(it); guardada = it }
-                                entrevista = null
-                            },
-                            alOmitir = {
-                                RutinaGuardada(Rutina.POR_DEFECTO, porDefecto = true).also { almacen.guardar(it); guardada = it }
-                                entrevista = null
-                            },
-                        )
-                    } else {
-                        PruebaDeAlarmas(guardada) { entrevista = guardada?.let { Entrevista.desde(it.rutina) } ?: Entrevista() }
-                    }
-                }
+                Surface { AppPaciente() }
             }
         }
     }
 }
 
+/**
+ * Pruebas de alarmas para el banco de dispositivos (HU-15) y de la rutina. Se abre desde
+ * «Herramientas de prueba» en la compilación de depuración.
+ */
 @Composable
-private fun PruebaDeAlarmas(rutina: RutinaGuardada?, alAjustarRutina: () -> Unit) {
+internal fun PruebaDeAlarmas(rutina: RutinaGuardada?, alAjustarRutina: () -> Unit) {
     val contexto = LocalContext.current
     val programador = remember { ProgramadorDeAlarmas(contexto) }
     val registro = remember { RegistroDeDisparos(contexto) }

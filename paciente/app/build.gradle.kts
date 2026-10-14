@@ -50,6 +50,13 @@ dependencies {
     implementation("androidx.core:core-ktx:1.19.1")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
 
+    // Lectura del QR con la cámara (HU-11). ZXing decodifica en el teléfono, sin servicios de
+    // Google ni envío de datos de uso: ML Kit sí los envía.
+    implementation("androidx.camera:camera-camera2:1.6.2")
+    implementation("androidx.camera:camera-lifecycle:1.6.2")
+    implementation("androidx.camera:camera-view:1.6.2")
+    implementation("com.google.zxing:core:3.5.4")
+
     testImplementation("junit:junit:4.13.2")
     testImplementation(kotlin("test-junit"))
     // Android trae org.json, pero en las pruebas de la computadora solo hay esqueletos.
