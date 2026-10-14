@@ -56,9 +56,12 @@ data class ProductoRespuesta(
     val principioActivo: String,
     val forma: String,
     val concentracion: String,
+    /** «DS404», «DS405» o null (HU-06). */
+    val controlLegal: String?,
 ) {
     companion object {
-        fun de(p: Producto) = ProductoRespuesta(p.gtin.valor, p.nombre, p.principioActivo, p.forma, p.concentracion)
+        fun de(p: Producto) =
+            ProductoRespuesta(p.gtin.valor, p.nombre, p.principioActivo, p.forma, p.concentracion, p.controlLegal?.codigo)
     }
 }
 
