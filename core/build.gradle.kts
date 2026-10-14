@@ -22,6 +22,9 @@ repositories {
 dependencies {
     implementation("cl.midosis:motor")
     implementation("cl.midosis:credencial")
+    // Firma con Cloud KMS en producción (ADR-016); la clave privada nunca sale de KMS.
+    implementation(platform("com.google.cloud:libraries-bom:26.90.0"))
+    implementation("com.google.cloud:google-cloud-kms")
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
