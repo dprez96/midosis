@@ -35,6 +35,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import cl.midosis.paciente.BuildConfig
 import cl.midosis.paciente.alarmas.PlanDeAlarmas
 import cl.midosis.paciente.alarmas.ProgramadorDeAlarmas
 import cl.midosis.paciente.alarmas.RegistroDeDisparos
@@ -48,7 +49,8 @@ import java.time.format.DateTimeFormatter
 /**
  * Pantalla de prueba de alarmas (HU-15). La pantalla del paciente llega con la carga de
  * tratamientos desde el código (HU-08); esta sirve para verificar en teléfonos reales que
- * las alarmas suenan a tiempo y para alimentar el banco de dispositivos.
+ * las alarmas suenan a tiempo y para alimentar el banco de dispositivos. En la compilación
+ * de depuración trae además la prueba de verificación de códigos (HU-09).
  */
 class PantallaPrincipal : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -175,6 +177,8 @@ private fun PruebaDeAlarmas() {
                 }
             }
         }
+
+        if (BuildConfig.DEBUG) PruebaDeCodigos()
     }
 }
 

@@ -1,0 +1,13 @@
+{
+  "descripcion": "SOLO PRUEBAS. Claves privadas de prueba para que la pantalla de depuración emita códigos en el teléfono. Son públicas: ver contrato/vectores/claves-de-prueba.json. No existen en producción.",
+  "firmantes": [
+    {
+      "kid": "prueba-1",
+      "privada": "4f9433da86af1e4c520b3a7951ce1a76527534097790e285dfaa975d2c6a67e3"
+    },
+    {
+      "kid": "prueba-desconocida",
+      "privada": "2cf88cb3b3eb7d56523dc908a6c28ee01abcaf398768755c7cddf07f5eee3847"
+    }
+  ]
+}

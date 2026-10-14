@@ -5,4 +5,18 @@
     <string name="canal_tomas_descripcion">Avisa a la hora de tomar cada medicamento. Suena aunque el teléfono esté sin conexión.</string>
     <string name="notificacion_titulo">Hora de tu medicamento</string>
     <string name="notificacion_titulo_varios">Hora de tus medicamentos</string>
+
+    <!-- Rechazos al leer un código (HU-09). Cada uno pide algo distinto al paciente. -->
+    <string name="rechazo_no_es_de_midosis">Este no es un código de MiDosis</string>
+    <string name="rechazo_no_es_de_midosis_explicacion">Busca el código impreso en el comprobante que te entregaron en la farmacia.</string>
+    <string name="rechazo_alterado">Este código fue alterado</string>
+    <string name="rechazo_alterado_explicacion">No se puede confiar en lo que contiene, así que no se cargó nada. Vuelve a la farmacia para que te entreguen uno nuevo.</string>
+    <string name="rechazo_emisor_desconocido">Este código no viene de una farmacia reconocida</string>
+    <string name="rechazo_emisor_desconocido_explicacion">MiDosis solo acepta códigos de farmacias habilitadas. No se cargó nada. Consulta en la farmacia donde retiraste tus medicamentos.</string>
+    <string name="rechazo_expirado">Este código venció</string>
+    <string name="rechazo_expirado_explicacion">Los códigos se pueden cargar durante 72 horas desde que se entregan. Pide en la farmacia que te emitan uno nuevo.</string>
+    <string name="rechazo_actualizar">Actualiza MiDosis</string>
+    <string name="rechazo_actualizar_explicacion">Este código es de una versión más nueva. Actualiza la aplicación y vuelve a cargarlo.</string>
+    <string name="rechazo_error_de_la_farmacia">Este código tiene un error</string>
+    <string name="rechazo_error_de_la_farmacia_explicacion">Salió así de la farmacia y no se puede cargar. Vuelve a la farmacia para que lo revisen y te entreguen uno nuevo.</string>
 </resources>

@@ -1,0 +1,35 @@
+{
+  "descripcion": "SOLO PRUEBAS. Las claves de contrato/vectores/claves-de-prueba.json que trae la aplicación de prueba. La compilación de producción usa src/main/assets y rechaza cualquier kid que empiece con «prueba-».",
+  "emisores": [
+    {
+      "kid": "prueba-1",
+      "publica": "10e14999d97e2fdc7bcd97d4d5c648706775101bb3becbb2f94d9e7e192627d8",
+      "comuna": "13123",
+      "vigenteDesde": 1767225600,
+      "vigenteHasta": null,
+      "revocada": false
+    },
+    {
+      "kid": "prueba-2",
+      "publica": "a9abe9487b3c73c496f30e8b60fedfdc3017cdbe99759f688475680bcec4de9c",
+      "comuna": "13123",
+      "vigenteDesde": 1788220800,
+      "vigenteHasta": null,
+      "revocada": false
+    },
+    {
+      "kid": "prueba-revocada",
+      "publica": "17e110dd4ff583969297019533f57511e56e34354efba317f48c3c7968a4bfc1",
+      "comuna": "13123",
+      "vigenteDesde": 1767225600,
+      "vigenteHasta": null,
+      "revocada": true
+    }
+  ],
+  "contenido": [
+    {
+      "kid": "prueba-c1",
+      "clave": "9404adddf7a504e65ce5bcdadfb7fb6a913d65aaae3110f8817838207ecb4da8"
+    }
+  ]
+}
