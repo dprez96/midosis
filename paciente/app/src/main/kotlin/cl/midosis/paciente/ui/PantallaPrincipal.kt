@@ -35,7 +35,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import cl.midosis.motor.rutina.Rutina
 import cl.midosis.paciente.BuildConfig
+import cl.midosis.paciente.rutina.AlmacenDeRutina
+import cl.midosis.paciente.rutina.Entrevista
+import cl.midosis.paciente.rutina.RutinaGuardada
 import cl.midosis.paciente.alarmas.PlanDeAlarmas
 import cl.midosis.paciente.alarmas.ProgramadorDeAlarmas
 import cl.midosis.paciente.alarmas.RegistroDeDisparos
@@ -57,14 +61,36 @@ class PantallaPrincipal : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme {
-                Surface { PruebaDeAlarmas() }
+                Surface {
+                    val contexto = LocalContext.current
+                    val almacen = remember { AlmacenDeRutina(contexto) }
+                    var guardada by remember { mutableStateOf(almacen.leer()) }
+                    var entrevista by remember { mutableStateOf<Entrevista?>(null) }
+
+                    val abierta = entrevista
+                    if (abierta != null) {
+                        EntrevistaDeRutina(
+                            inicial = abierta,
+                            alTerminar = { rutina ->
+                                RutinaGuardada(rutina, porDefecto = false).also { almacen.guardar(it); guardada = it }
+                                entrevista = null
+                            },
+                            alOmitir = {
+                                RutinaGuardada(Rutina.POR_DEFECTO, porDefecto = true).also { almacen.guardar(it); guardada = it }
+                                entrevista = null
+                            },
+                        )
+                    } else {
+                        PruebaDeAlarmas(guardada) { entrevista = guardada?.let { Entrevista.desde(it.rutina) } ?: Entrevista() }
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun PruebaDeAlarmas() {
+private fun PruebaDeAlarmas(rutina: RutinaGuardada?, alAjustarRutina: () -> Unit) {
     val contexto = LocalContext.current
     val programador = remember { ProgramadorDeAlarmas(contexto) }
     val registro = remember { RegistroDeDisparos(contexto) }
@@ -178,7 +204,31 @@ private fun PruebaDeAlarmas() {
             }
         }
 
+        TarjetaDeRutina(rutina, alAjustarRutina)
+
         if (BuildConfig.DEBUG) PruebaDeCodigos()
+    }
+}
+
+/**
+ * La rutina declarada (HU-13). Si se omitió la entrevista, ofrece ajustarla. En la pantalla
+ * del paciente (HU-19) pasará a sus ajustes.
+ */
+@Composable
+private fun TarjetaDeRutina(guardada: RutinaGuardada?, alAjustar: () -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("Rutina diaria", style = MaterialTheme.typography.titleMedium)
+            when {
+                guardada == null -> Text("Todavía no respondes la entrevista.")
+                else -> with(guardada.rutina) {
+                    Text("Te levantas ${despertar.format(HORA)} y te acuestas ${acostarse.format(HORA)}.")
+                    Text("Comidas: ${comidas.joinToString(", ") { it.format(HORA) }}.")
+                    if (guardada.porDefecto) Text("Son los horarios habituales. Ajústalos para que las alarmas calcen con tu día.")
+                }
+            }
+            Button(onClick = alAjustar) { Text(if (guardada == null) "Responder la entrevista" else "Ajustar mis horarios") }
+        }
     }
 }
 
