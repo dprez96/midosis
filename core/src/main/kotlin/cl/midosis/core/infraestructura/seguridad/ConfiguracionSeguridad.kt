@@ -27,6 +27,9 @@ class ConfiguracionSeguridad {
         http
             .authorizeHttpRequests {
                 it.requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                // El paciente canjea sin cuenta (HU-10, RF-M-01). Protegen la ruta el código
+                // corto, el PIN y la limitación de intentos por código.
+                it.requestMatchers(HttpMethod.POST, RUTA_CANJE).permitAll()
                 // Las plantillas son contenido clínico de la comuna: solo el químico
                 // farmacéutico las crea (HU-03). Consultarlas puede cualquier perfil.
                 it.requestMatchers(HttpMethod.POST, "/api/catalogo/productos/*/plantillas").hasAuthority(AUTORIDAD_QF)
@@ -34,6 +37,9 @@ class ConfiguracionSeguridad {
             }
             .oauth2ResourceServer { servidor -> servidor.jwt { it.jwtAuthenticationConverter(rolesDelToken()) } }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
+            // El canje no usa cookies ni credenciales que el navegador mande solo, que es lo
+            // que explota un ataque CSRF: no hay nada que falsificar en nombre de otro.
+            .csrf { it.ignoringRequestMatchers(RUTA_CANJE) }
             // El filtro se crea aquí y no como componente: Spring Boot registraría un
             // componente también como filtro del servidor, y correría dos veces.
             .addFilterAfter(FiltroManipulacionComuna(registro), BearerTokenAuthenticationFilter::class.java)
@@ -56,5 +62,6 @@ class ConfiguracionSeguridad {
         const val CLAIM_ROL = "rol"
         const val PREFIJO_ROL = "ROL_"
         const val AUTORIDAD_QF = "${PREFIJO_ROL}qf"
+        const val RUTA_CANJE = "/api/canje"
     }
 }
