@@ -20,3 +20,9 @@ INSERT INTO producto (comuna, gtin, nombre, principio_activo, forma, concentraci
     ('13123', '7802250013105', 'Salbutamol 100 mcg', 'Salbutamol sulfato', 'Aerosol para inhalación', '100 mcg/dosis'),
     ('13123', '7802250013204', 'Paracetamol 500 mg', 'Paracetamol', 'Comprimido', '500 mg')
 ON CONFLICT (comuna, gtin) DO NOTHING;
+
+-- Sujetos a control legal (HU-06): el comprobante impreso no muestra su nombre.
+INSERT INTO producto (comuna, gtin, nombre, principio_activo, forma, concentracion, control_legal) VALUES
+    ('13123', '7802250013303', 'Clonazepam 0,5 mg', 'Clonazepam', 'Comprimido', '0,5 mg', 'DS405'),
+    ('13123', '7802250013402', 'Morfina 10 mg', 'Morfina sulfato', 'Comprimido', '10 mg', 'DS404')
+ON CONFLICT (comuna, gtin) DO NOTHING;

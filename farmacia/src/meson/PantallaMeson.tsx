@@ -1,24 +1,29 @@
 import { useEffect, useReducer, useRef, useState } from 'react'
 import type { ApiDelMeson } from '../api/cliente'
-import { detalleDeProducto, type Producto } from '../dominio/catalogo'
+import { describirControlLegal, detalleDeProducto, type Producto } from '../dominio/catalogo'
+import { referenciaNeutra } from '../dominio/comprobante'
 import { leerCodigo } from '../dominio/gtin'
 import type { Posologia } from '../dominio/posologia'
 import { ATENCION_NUEVA, reducirAtencion, type Linea } from './atencion'
 import { BusquedaManual } from './BusquedaManual'
 import { LectorDeCodigo } from './LectorDeCodigo'
 import { PosologiaDeLinea } from './PosologiaDeLinea'
+import { TramoDeLinea } from './TramoDeLinea'
+import { hoy as fechaDeHoy, type Tramo } from '../dominio/tramo'
 
 interface Props {
   api: ApiDelMeson
   /** Solo el químico farmacéutico guarda plantillas; core lo vuelve a verificar. */
   puedeGuardarPlantillas: boolean
+  /** La fecha del retiro, AAAA-MM-DD. Por omisión, la de hoy; las pruebas la fijan. */
+  hoy?: () => string
 }
 
 /**
- * Atención en el mesón: identificar los productos que se entregan (HU-02) y registrar su
- * posología (HU-03).
+ * Atención en el mesón: identificar los productos que se entregan (HU-02), registrar su
+ * posología (HU-03) y lo que se entrega en este retiro (HU-04).
  */
-export function PantallaMeson({ api, puedeGuardarPlantillas }: Props) {
+export function PantallaMeson({ api, puedeGuardarPlantillas, hoy = fechaDeHoy }: Props) {
   const [atencion, despachar] = useReducer(reducirAtencion, ATENCION_NUEVA)
   const [busqueda, setBusqueda] = useState<{ codigoNoEncontrado: string | null } | null>(null)
   const [consultas, setConsultas] = useState(0)
@@ -42,6 +47,11 @@ export function PantallaMeson({ api, puedeGuardarPlantillas }: Props) {
     document.addEventListener('keydown', redirigir, true)
     return () => document.removeEventListener('keydown', redirigir, true)
   }, [])
+
+  function registrarTramo(linea: Linea, tramo: Tramo) {
+    despachar({ tipo: 'tramo', id: linea.id, tramo })
+    volverAlLector()
+  }
 
   function registrarPosologia(linea: Linea, posologia: Posologia, plantillaId: string | null) {
     despachar({ tipo: 'posologia', id: linea.id, posologia, plantillaId })
@@ -124,13 +134,19 @@ export function PantallaMeson({ api, puedeGuardarPlantillas }: Props) {
           <p className="secundario">Aún no hay productos. Escanee el primer envase.</p>
         ) : (
           <ol className="lineas">
-            {atencion.lineas.map((linea) => (
+            {atencion.lineas.map((linea, indice) => (
               <li key={linea.id} className="linea">
                 <div className="fila espaciada">
                   <div>
                     <p className="nombre">{linea.producto.nombre}</p>
                     <p>{detalleDeProducto(linea.producto)}</p>
                     <p className="codigo">{linea.producto.gtin}</p>
+                    {linea.producto.controlLegal && (
+                      <p className="aviso aviso-info">
+                        <strong>{describirControlLegal(linea.producto.controlLegal)}.</strong> En el comprobante
+                        figurará como «{referenciaNeutra(indice + 1)}», sin su nombre.
+                      </p>
+                    )}
                   </div>
                   <button
                     type="button"
@@ -150,6 +166,13 @@ export function PantallaMeson({ api, puedeGuardarPlantillas }: Props) {
                   puedeGuardarPlantilla={puedeGuardarPlantillas}
                   alRegistrar={(posologia, plantillaId) => registrarPosologia(linea, posologia, plantillaId)}
                 />
+                {linea.posologia !== null && (
+                  <TramoDeLinea
+                    linea={{ ...linea, posologia: linea.posologia }}
+                    retiro={hoy()}
+                    alRegistrar={(tramo) => registrarTramo(linea, tramo)}
+                  />
+                )}
               </li>
             ))}
           </ol>
