@@ -8,18 +8,22 @@ import { ATENCION_NUEVA, reducirAtencion, type Linea } from './atencion'
 import { BusquedaManual } from './BusquedaManual'
 import { LectorDeCodigo } from './LectorDeCodigo'
 import { PosologiaDeLinea } from './PosologiaDeLinea'
+import { TramoDeLinea } from './TramoDeLinea'
+import { hoy as fechaDeHoy, type Tramo } from '../dominio/tramo'
 
 interface Props {
   api: ApiDelMeson
   /** Solo el químico farmacéutico guarda plantillas; core lo vuelve a verificar. */
   puedeGuardarPlantillas: boolean
+  /** La fecha del retiro, AAAA-MM-DD. Por omisión, la de hoy; las pruebas la fijan. */
+  hoy?: () => string
 }
 
 /**
- * Atención en el mesón: identificar los productos que se entregan (HU-02) y registrar su
- * posología (HU-03).
+ * Atención en el mesón: identificar los productos que se entregan (HU-02), registrar su
+ * posología (HU-03) y lo que se entrega en este retiro (HU-04).
  */
-export function PantallaMeson({ api, puedeGuardarPlantillas }: Props) {
+export function PantallaMeson({ api, puedeGuardarPlantillas, hoy = fechaDeHoy }: Props) {
   const [atencion, despachar] = useReducer(reducirAtencion, ATENCION_NUEVA)
   const [busqueda, setBusqueda] = useState<{ codigoNoEncontrado: string | null } | null>(null)
   const [consultas, setConsultas] = useState(0)
@@ -43,6 +47,11 @@ export function PantallaMeson({ api, puedeGuardarPlantillas }: Props) {
     document.addEventListener('keydown', redirigir, true)
     return () => document.removeEventListener('keydown', redirigir, true)
   }, [])
+
+  function registrarTramo(linea: Linea, tramo: Tramo) {
+    despachar({ tipo: 'tramo', id: linea.id, tramo })
+    volverAlLector()
+  }
 
   function registrarPosologia(linea: Linea, posologia: Posologia, plantillaId: string | null) {
     despachar({ tipo: 'posologia', id: linea.id, posologia, plantillaId })
@@ -157,6 +166,13 @@ export function PantallaMeson({ api, puedeGuardarPlantillas }: Props) {
                   puedeGuardarPlantilla={puedeGuardarPlantillas}
                   alRegistrar={(posologia, plantillaId) => registrarPosologia(linea, posologia, plantillaId)}
                 />
+                {linea.posologia !== null && (
+                  <TramoDeLinea
+                    linea={{ ...linea, posologia: linea.posologia }}
+                    retiro={hoy()}
+                    alRegistrar={(tramo) => registrarTramo(linea, tramo)}
+                  />
+                )}
               </li>
             ))}
           </ol>
