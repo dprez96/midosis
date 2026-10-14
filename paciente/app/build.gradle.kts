@@ -17,6 +17,16 @@ android {
         versionCode = 1
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Dirección de core para el canje con código corto (HU-10). Vacía en producción hasta
+        // que core esté publicado: la pantalla dice que todavía no está disponible.
+        buildConfigField("String", "URL_CORE", "\"\"")
+    }
+
+    buildTypes {
+        debug {
+            // core en el computador, alcanzado con «adb reverse tcp:8080 tcp:8080».
+            buildConfigField("String", "URL_CORE", "\"http://127.0.0.1:8080\"")
+        }
     }
 
     compileOptions {

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Sin permiso de Internet, a propósito: el sistema operativo le impide a la aplicación
-  usar la red. Que las alarmas funcionen sin conexión (HU-15) no depende de una promesa
-  del código. Cuando llegue la sincronización, este permiso se agrega con su revisión.
+  Internet se usa solo para el canje con código corto y PIN (HU-10), cuando el paciente lo
+  pide. Las alarmas, la verificación del código y el tratamiento siguen funcionando sin
+  conexión (HU-15, HU-09): nada de eso pasa por la red. La configuración de red exige HTTPS.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
@@ -15,11 +15,13 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Leer el código del comprobante (HU-11). La imagen se analiza en el teléfono y no se guarda. -->
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-feature android:name="android.hardware.camera.any" android:required="false" />
 
     <application
         android:name=".AplicacionMiDosis"
         android:allowBackup="false"
+        android:networkSecurityConfig="@xml/red"
         android:label="@string/nombre_app"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">

@@ -45,6 +45,7 @@ import java.time.format.DateTimeFormatter
 private sealed interface Pantalla {
     data object Inicio : Pantalla
     data object Escanear : Pantalla
+    data object CodigoCorto : Pantalla
     data class Confirmar(val lectura: Lectura.Aceptado) : Pantalla
     data class Rechazo(val mensaje: MensajeDeRechazo) : Pantalla
     data object YaCargado : Pantalla
@@ -95,7 +96,11 @@ fun AppPaciente() {
             Text("Apunta la cámara al código impreso en el comprobante de la farmacia.")
             EscanerDeCodigo(alLeer = ::leerCodigo)
             if (BuildConfig.DEBUG) CodigoDePrueba(alGenerar = ::leerCodigo)
+            TextButton(onClick = { pantalla = Pantalla.CodigoCorto }) { Text("¿No se puede leer? Escribe el código y el PIN") }
             OutlinedButton(onClick = { pantalla = Pantalla.Inicio }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") }
+        }
+        Pantalla.CodigoCorto -> Marco("Escribe el código") {
+            IngresoDeCodigoCorto(alObtener = ::leerCodigo, alCancelar = { pantalla = Pantalla.Escanear })
         }
         is Pantalla.Confirmar -> Confirmacion(
             carga = p.lectura.carga,
