@@ -36,7 +36,10 @@ import cl.midosis.paciente.rutina.Entrevista
 import cl.midosis.paciente.rutina.RutinaGuardada
 import cl.midosis.paciente.tratamiento.AlmacenDeTratamientos
 import cl.midosis.paciente.tratamiento.TratamientoGuardado
+import cl.midosis.paciente.tratamiento.Resumen
 import java.time.Instant
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 /** Dónde está el paciente dentro de la aplicación. */
 private sealed interface Pantalla {
@@ -146,13 +149,11 @@ private fun Inicio(
             Text("Te recordamos tus medicamentos a la hora que corresponde, aunque no tengas internet.")
             Text("No necesitas crear una cuenta ni dar tu nombre: todo queda en tu teléfono.")
         } else {
+            val hoy = LocalDate.now()
             tratamientos.forEach { t ->
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        t.carga.productos.forEach { Text(it.etiqueta, style = MaterialTheme.typography.titleMedium) }
-                    }
-                }
+                t.carga.productos.forEach { p -> TarjetaDeMedicamento(Resumen.de(p, t.carga.emitidoEn, hoy)) }
             }
+            Text(LEYENDA, style = MaterialTheme.typography.bodySmall)
         }
         Button(onClick = alCargar, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
             Text(if (tratamientos.isEmpty()) "Cargar mi tratamiento" else "Cargar otro tratamiento")
@@ -164,6 +165,44 @@ private fun Inicio(
         if (BuildConfig.DEBUG) TextButton(onClick = alAbrirPruebas) { Text("Herramientas de prueba") }
     }
 }
+
+/**
+ * Las dos cifras de la HU-19 a la vista, sin navegar: cuánto dura el tratamiento indicado y
+ * hasta cuándo alcanza lo retirado. Nunca dice «terminado» mientras falte retirar (RN-07).
+ */
+@Composable
+private fun TarjetaDeMedicamento(r: Resumen) {
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(r.etiqueta, style = MaterialTheme.typography.titleLarge)
+            Text("Tratamiento indicado: ${dias(r.indicadoDias.toLong())}", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Lo que retiraste alcanza hasta el ${r.alcanzaHasta.format(FECHA)} (${dias(r.cubiertoDias.toLong())})",
+                style = MaterialTheme.typography.titleMedium,
+            )
+            val estado = when (r.estado) {
+                Resumen.Estado.COMPLETO -> "Con lo que retiraste completas el tratamiento indicado."
+                Resumen.Estado.AL_DIA -> "Te quedan ${dias(r.quedanDias)} de medicamento."
+                Resumen.Estado.VOLVER_PRONTO ->
+                    "Te quedan ${dias(r.quedanDias)}: vuelve a la farmacia a retirar lo que sigue."
+                Resumen.Estado.SE_ACABO ->
+                    "Se te acabó el ${r.alcanzaHasta.format(FECHA)}. Tu tratamiento sigue: retira lo que falta en la farmacia."
+            }
+            Text(
+                estado,
+                color = if (r.estado == Resumen.Estado.VOLVER_PRONTO || r.estado == Resumen.Estado.SE_ACABO) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                },
+            )
+        }
+    }
+}
+
+private val FECHA = DateTimeFormatter.ofPattern("dd-MM-yyyy")
+
+private fun dias(n: Long): String = if (n == 1L) "1 día" else "$n días"
 
 /** Lo que trae el código, para que el paciente lo revise antes de guardarlo. */
 @Composable
