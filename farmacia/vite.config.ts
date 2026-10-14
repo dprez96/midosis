@@ -11,6 +11,11 @@ export default defineConfig({
     proxy: {
       '/api': process.env.MIDOSIS_CORE_URL ?? 'http://localhost:8080',
     },
+    // Las pruebas leen los vectores del contrato, fuera de farmacia/. Solo esa carpeta,
+    // no el resto del repositorio.
+    fs: {
+      allow: ['.', '../contrato/vectores'],
+    },
   },
   test: {
     environment: 'jsdom',
