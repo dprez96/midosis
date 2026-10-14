@@ -10,6 +10,7 @@ export const losartan: Producto = {
   principioActivo: 'Losartán potásico',
   forma: 'Comprimido',
   concentracion: '50 mg',
+  controlLegal: null,
 }
 
 export const metformina: Producto = {
@@ -18,6 +19,17 @@ export const metformina: Producto = {
   principioActivo: 'Metformina clorhidrato',
   forma: 'Comprimido',
   concentracion: '850 mg',
+  controlLegal: null,
+}
+
+/** Psicotrópico del DS 405: el comprobante no muestra su nombre (HU-06). */
+export const clonazepam: Producto = {
+  gtin: '7802250013303',
+  nombre: 'Clonazepam 0,5 mg',
+  principioActivo: 'Clonazepam',
+  forma: 'Comprimido',
+  concentracion: '0,5 mg',
+  controlLegal: 'DS405',
 }
 
 /** Válido, pero ausente de cualquier catálogo de prueba. */

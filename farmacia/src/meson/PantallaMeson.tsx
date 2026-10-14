@@ -1,6 +1,7 @@
 import { useEffect, useReducer, useRef, useState } from 'react'
 import type { ApiDelMeson } from '../api/cliente'
-import { detalleDeProducto, type Producto } from '../dominio/catalogo'
+import { describirControlLegal, detalleDeProducto, type Producto } from '../dominio/catalogo'
+import { referenciaNeutra } from '../dominio/comprobante'
 import { leerCodigo } from '../dominio/gtin'
 import type { Posologia } from '../dominio/posologia'
 import { ATENCION_NUEVA, reducirAtencion, type Linea } from './atencion'
@@ -133,13 +134,19 @@ export function PantallaMeson({ api, puedeGuardarPlantillas, hoy = fechaDeHoy }:
           <p className="secundario">Aún no hay productos. Escanee el primer envase.</p>
         ) : (
           <ol className="lineas">
-            {atencion.lineas.map((linea) => (
+            {atencion.lineas.map((linea, indice) => (
               <li key={linea.id} className="linea">
                 <div className="fila espaciada">
                   <div>
                     <p className="nombre">{linea.producto.nombre}</p>
                     <p>{detalleDeProducto(linea.producto)}</p>
                     <p className="codigo">{linea.producto.gtin}</p>
+                    {linea.producto.controlLegal && (
+                      <p className="aviso aviso-info">
+                        <strong>{describirControlLegal(linea.producto.controlLegal)}.</strong> En el comprobante
+                        figurará como «{referenciaNeutra(indice + 1)}», sin su nombre.
+                      </p>
+                    )}
                   </div>
                   <button
                     type="button"
