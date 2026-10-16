@@ -37,7 +37,11 @@ import cl.midosis.paciente.rutina.RutinaGuardada
 import cl.midosis.paciente.tratamiento.AlmacenDeTratamientos
 import cl.midosis.paciente.tratamiento.TratamientoGuardado
 import cl.midosis.paciente.tratamiento.Resumen
+import cl.midosis.paciente.alarmas.PlanDeAlarmas
+import cl.midosis.paciente.alarmas.ProgramadorDeAlarmas
+import cl.midosis.paciente.tratamiento.Planificacion
 import java.time.Instant
+import java.time.LocalDateTime
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -51,6 +55,7 @@ private sealed interface Pantalla {
     data object YaCargado : Pantalla
     data class Entrevistar(val entrevista: Entrevista) : Pantalla
     data object Pruebas : Pantalla
+    data object Permisos : Pantalla
 }
 
 /**
@@ -68,6 +73,8 @@ fun AppPaciente() {
     var lista by remember { mutableStateOf(tratamientos.leer()) }
     var rutina by remember { mutableStateOf(rutinas.leer()) }
     var pantalla by remember { mutableStateOf<Pantalla>(Pantalla.Inicio) }
+    var porProgramar by remember { mutableStateOf<TratamientoGuardado?>(null) }
+    val programador = remember { ProgramadorDeAlarmas(contexto) }
 
     BackHandler(enabled = pantalla != Pantalla.Inicio) { pantalla = Pantalla.Inicio }
 
@@ -78,10 +85,23 @@ fun AppPaciente() {
         }
     }
 
+    /**
+     * Programa las alarmas del tramo cubierto (HU-08). Si no quedó ninguna, faltan permisos: se
+     * dice, porque el sistema nunca debe aparentar estar activo sin estarlo (CU-P-03).
+     */
+    fun programarAlarmas(t: TratamientoGuardado, conRutina: RutinaGuardada) {
+        val ahora = LocalDateTime.now()
+        val tomas = Planificacion.tomasDe(t, conRutina.rutina, ahora)
+        val programadas = programador.programar(PlanDeAlarmas.construir(tomas, ahora), ahora)
+        pantalla = if (programadas == 0) Pantalla.Permisos else Pantalla.Inicio
+    }
+
     fun guardarRutina(guardada: RutinaGuardada) {
         rutinas.guardar(guardada)
         rutina = guardada
-        pantalla = Pantalla.Inicio
+        val pendiente = porProgramar
+        porProgramar = null
+        if (pendiente != null) programarAlarmas(pendiente, guardada) else pantalla = Pantalla.Inicio
     }
 
     when (val p = pantalla) {
@@ -110,8 +130,16 @@ fun AppPaciente() {
                     AlmacenDeTratamientos.Resultado.YaCargado -> Pantalla.YaCargado
                     AlmacenDeTratamientos.Resultado.Guardado -> {
                         lista = tratamientos.leer()
-                        // Con el primer tratamiento se pregunta la rutina (CU-P-02).
-                        if (rutina == null) Pantalla.Entrevistar(Entrevista()) else Pantalla.Inicio
+                        val conRutina = rutina
+                        if (conRutina == null) {
+                            // Con el primer tratamiento se pregunta la rutina (CU-P-02), y las
+                            // alarmas se programan al terminar la entrevista.
+                            porProgramar = nuevo
+                            Pantalla.Entrevistar(Entrevista())
+                        } else {
+                            programarAlarmas(nuevo, conRutina)
+                            pantalla
+                        }
                     }
                 }
             },
@@ -133,6 +161,9 @@ fun AppPaciente() {
             inicial = p.entrevista,
             alTerminar = { guardarRutina(RutinaGuardada(it, porDefecto = false)) },
             alOmitir = { guardarRutina(RutinaGuardada(Rutina.POR_DEFECTO, porDefecto = true)) },
+        )
+        Pantalla.Permisos -> PermisosDeAlarmas(
+            alListo = { programador.reprogramarGuardadas(); pantalla = Pantalla.Inicio },
         )
         Pantalla.Pruebas -> Column {
             TextButton(onClick = { pantalla = Pantalla.Inicio }, modifier = Modifier.safeDrawingPadding()) { Text("← Volver") }
@@ -158,6 +189,7 @@ private fun Inicio(
             tratamientos.forEach { t ->
                 t.carga.productos.forEach { p -> TarjetaDeMedicamento(Resumen.de(p, t.carga.emitidoEn, hoy)) }
             }
+            ProximaToma()
             Text(LEYENDA, style = MaterialTheme.typography.bodySmall)
         }
         Button(onClick = alCargar, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {

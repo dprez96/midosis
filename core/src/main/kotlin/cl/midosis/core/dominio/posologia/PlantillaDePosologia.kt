@@ -13,17 +13,17 @@ import java.util.UUID
  * estructurados (HU-03), no como texto libre. El código es lo que viaja por la API; la
  * web de farmacia tiene la misma lista con sus nombres para mostrar.
  */
-enum class UnidadDeDosis(val codigo: String) {
-    COMPRIMIDO("comprimido"),
-    CAPSULA("capsula"),
-    MILILITRO("ml"),
-    GOTA("gota"),
-    SOBRE("sobre"),
-    INHALACION("inhalacion"),
-    APLICACION("aplicacion"),
-    SUPOSITORIO("supositorio"),
-    PARCHE("parche"),
-    UNIDAD_INTERNACIONAL("ui"),
+enum class UnidadDeDosis(val codigo: String, val singular: String, val plural: String) {
+    COMPRIMIDO("comprimido", "comprimido", "comprimidos"),
+    CAPSULA("capsula", "cápsula", "cápsulas"),
+    MILILITRO("ml", "ml", "ml"),
+    GOTA("gota", "gota", "gotas"),
+    SOBRE("sobre", "sobre", "sobres"),
+    INHALACION("inhalacion", "inhalación", "inhalaciones"),
+    APLICACION("aplicacion", "aplicación", "aplicaciones"),
+    SUPOSITORIO("supositorio", "supositorio", "supositorios"),
+    PARCHE("parche", "parche", "parches"),
+    UNIDAD_INTERNACIONAL("ui", "UI", "UI"),
     ;
 
     companion object {
@@ -35,6 +35,13 @@ enum class UnidadDeDosis(val codigo: String) {
 
 /** Cuánto se toma cada vez: una cantidad de hasta dos decimales, como 0,5 comprimido. */
 data class Dosis(val cantidad: BigDecimal, val unidad: UnidadDeDosis) {
+    /** Como se lee y se imprime, igual que en la web: «1 comprimido», «0,5 comprimidos». */
+    val texto: String
+        get() {
+            val numero = normalizar(cantidad).toPlainString().replace('.', ',')
+            return "$numero ${if (cantidad.compareTo(BigDecimal.ONE) == 0) unidad.singular else unidad.plural}"
+        }
+
     init {
         if (cantidad.signum() <= 0) throw PosologiaInvalida("la cantidad por toma debe ser mayor que cero")
         if (cantidad > CANTIDAD_MAXIMA) throw PosologiaInvalida("la cantidad por toma no puede superar $CANTIDAD_MAXIMA")

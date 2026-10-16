@@ -10,3 +10,9 @@ spring:
   flyway:
     password: ${MIDOSIS_DB_DUENO_CLAVE:dueno_local}
     locations: classpath:db/migration,filesystem:../infra/local/semilla
+
+# Emite con las claves de prueba de contrato/vectores (que no protegen nada). En producción
+# no se configura y la emisión responde que no está disponible hasta tener Cloud KMS.
+midosis:
+  claves:
+    prueba: ../contrato/vectores/claves-de-prueba.json

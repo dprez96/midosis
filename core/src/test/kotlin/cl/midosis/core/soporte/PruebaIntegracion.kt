@@ -56,6 +56,8 @@ abstract class PruebaIntegracion {
             registro.add("spring.flyway.url", postgres::getJdbcUrl)
             registro.add("spring.flyway.user", postgres::getUsername)
             registro.add("spring.flyway.password", postgres::getPassword)
+            // Las pruebas emiten con las claves de prueba del contrato.
+            registro.add("midosis.claves.prueba") { "../contrato/vectores/claves-de-prueba.json" }
         }
 
         /** Acceso como superusuario, solo para preparar datos y revisar lo registrado. */
@@ -65,7 +67,7 @@ abstract class PruebaIntegracion {
 
         /** Vacía todas las tablas con datos de comunas. Una tabla nueva se agrega aquí. */
         fun limpiarDatos() {
-            administrador.execute("TRUNCATE sobre, plantilla_posologia, producto, evento_seguridad")
+            administrador.execute("TRUNCATE emision, sobre, plantilla_posologia, producto, evento_seguridad")
         }
 
         /** Token firmado con el perfil indicado. Por defecto, un auxiliar de farmacia. */
