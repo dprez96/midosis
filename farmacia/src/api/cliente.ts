@@ -1,4 +1,5 @@
 import type { Producto } from '../dominio/catalogo'
+import { peticionDeEmision, type CodigoEmitido, type Consentimiento, type LineaParaEmitir } from '../dominio/emision'
 import type { Plantilla, Posologia } from '../dominio/posologia'
 
 /** Error de una llamada a core, con un mensaje que se puede mostrar en el mesón. */
@@ -27,7 +28,12 @@ export interface ApiDePlantillas {
   crearPlantilla(gtin: string, posologia: Posologia): Promise<Plantilla>
 }
 
-export type ApiDelMeson = ApiDeCatalogo & ApiDePlantillas
+export interface ApiDeEmision {
+  /** Emite el código de la atención (HU-01). Core responde 503 si la emisión no está disponible. */
+  emitir(lineas: LineaParaEmitir[], consentimiento: Consentimiento): Promise<CodigoEmitido>
+}
+
+export type ApiDelMeson = ApiDeCatalogo & ApiDePlantillas & ApiDeEmision
 
 const MENSAJES_POR_ESTADO: Record<number, string> = {
   401: 'La sesión expiró. Vuelva a iniciar sesión.',
@@ -92,6 +98,13 @@ export function crearApi(obtenerToken: ObtenerToken, base = '/api'): ApiDelMeson
       return pedir<Plantilla>(`/catalogo/productos/${encodeURIComponent(gtin)}/plantillas`, {
         method: 'POST',
         body: JSON.stringify(posologia),
+      })
+    },
+
+    emitir(lineas, consentimiento) {
+      return pedir<CodigoEmitido>('/emisiones', {
+        method: 'POST',
+        body: JSON.stringify(peticionDeEmision(lineas, consentimiento)),
       })
     },
   }
