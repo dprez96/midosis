@@ -225,9 +225,4 @@ private fun Estado(titulo: String, ok: Boolean, explicacion: String, accion: Str
     }
 }
 
-private fun notificacionesPermitidas(contexto: android.content.Context): Boolean =
-    Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-        ContextCompat.checkSelfPermission(contexto, Manifest.permission.POST_NOTIFICATIONS) ==
-        PackageManager.PERMISSION_GRANTED
-
 private val HORA = DateTimeFormatter.ofPattern("HH:mm")

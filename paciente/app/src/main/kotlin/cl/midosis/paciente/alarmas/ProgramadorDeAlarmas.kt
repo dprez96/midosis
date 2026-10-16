@@ -32,23 +32,24 @@ class ProgramadorDeAlarmas(
         Build.VERSION.SDK_INT < Build.VERSION_CODES.S || alarmas.canScheduleExactAlarms()
 
     /**
-     * Programa las alarmas del plan. Devuelve cuántas quedaron programadas: cero si falta
-     * el permiso, para que quien llama lo muestre en vez de fallar en silencio (HU-24).
+     * Guarda el plan completo y entrega al sistema la parte que cae dentro de la ventana.
+     * Devuelve cuántas alarmas quedaron programadas: cero si falta el permiso, para que quien
+     * llama lo muestre en vez de fallar en silencio (HU-24, CU-P-03 5a).
      */
     fun programar(plan: List<SolicitudDeAlarma>, ahora: LocalDateTime = LocalDateTime.now()): Int {
-        val programadas = entregar(plan)
-        // Se guarda lo que de verdad quedó programado, para reprogramarlo tras un reinicio.
-        almacen.agregar(programadas, ahora)
-        return programadas.size
+        // Se guarda todo: lo que no se entrega ahora se entrega cuando la ventana avance o
+        // cuando el paciente conceda el permiso que falta.
+        almacen.agregar(plan, ahora)
+        return entregar(dentroDeLaVentana(plan, ahora)).size
     }
 
     /**
-     * Vuelve a entregar al sistema las alarmas guardadas que todavía no pasan (HU-17).
-     * Se llama al encender el teléfono y al actualizar la aplicación, porque en ambos casos
-     * Android borra las alarmas. Devuelve cuántas se reprogramaron.
+     * Vuelve a entregar al sistema las alarmas guardadas que caen en la ventana (HU-17). Se
+     * llama al encender el teléfono, al actualizar la aplicación y cada vez que suena una
+     * alarma, que es lo que hace avanzar la ventana. Devuelve cuántas se programaron.
      */
     fun reprogramarGuardadas(ahora: LocalDateTime = LocalDateTime.now()): Int =
-        entregar(almacen.leer().filter { it.momento.isAfter(ahora) }).size
+        entregar(dentroDeLaVentana(almacen.leer(), ahora)).size
 
     /** Cancela todas las alarmas que esta aplicación dejó programadas. */
     fun cancelarTodas() {
@@ -60,6 +61,18 @@ class ProgramadorDeAlarmas(
 
     fun cantidadVigentes(ahora: LocalDateTime = LocalDateTime.now()): Int =
         almacen.leer().count { it.momento.isAfter(ahora) }
+
+    companion object {
+        /**
+         * Android admite hasta 500 alarmas por aplicación. Un tramo de 180 días cada 8 horas
+         * ya las supera, así que solo se entregan las de los próximos días; el resto queda
+         * guardado y entra a medida que la ventana avanza.
+         */
+        val VENTANA: java.time.Duration = java.time.Duration.ofDays(7)
+
+        fun dentroDeLaVentana(plan: List<SolicitudDeAlarma>, ahora: LocalDateTime): List<SolicitudDeAlarma> =
+            plan.filter { it.momento.isAfter(ahora) && !it.momento.isAfter(ahora.plus(VENTANA)) }
+    }
 
     /** Entrega las alarmas al sistema y devuelve las que quedaron programadas. */
     private fun entregar(plan: List<SolicitudDeAlarma>): List<SolicitudDeAlarma> {

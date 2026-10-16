@@ -28,6 +28,8 @@ class ReceptorDeAlarma : BroadcastReceiver() {
 
         RegistroDeDisparos(contexto).anotar(id, programada, disparada)
         notificar(contexto, id, lineas)
+        // Cada alarma que suena hace avanzar la ventana de las que se entregan al sistema.
+        ProgramadorDeAlarmas(contexto).reprogramarGuardadas()
     }
 
     private fun notificar(contexto: Context, id: Int, lineas: List<String>) {
