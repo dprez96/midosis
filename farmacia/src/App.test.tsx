@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { App } from './App'
 import { leerConfiguracionFirebase } from './configuracion'
@@ -18,6 +19,19 @@ describe('App', () => {
 
     expect(screen.getByRole('textbox', { name: 'Código del producto' })).toBeInTheDocument()
     expect(screen.getByText(/Auxiliar de farmacia · Comuna 13123/)).toBeInTheDocument()
+  })
+
+  it('pasa a los códigos emitidos y vuelve al mesón sin perder la atención', async () => {
+    const usuario = userEvent.setup()
+    const perfil = { correo: 'aux@midosis.cl', comuna: '13123', rol: 'auxiliar' as const }
+    render(<App servicio={sesionFalsa(perfil)} api={catalogoFalso([])} />)
+
+    await usuario.type(screen.getByRole('textbox', { name: 'Código del producto' }), '78022')
+    await usuario.click(screen.getByRole('button', { name: 'Códigos emitidos' }))
+    expect(await screen.findByRole('heading', { name: 'Códigos emitidos' })).toBeInTheDocument()
+
+    await usuario.click(screen.getByRole('button', { name: 'Atención en el mesón' }))
+    expect(screen.getByRole('textbox', { name: 'Código del producto' })).toHaveValue('78022')
   })
 
   it('sin comuna o rol en el token no muestra el mesón', () => {
