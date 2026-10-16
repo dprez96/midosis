@@ -9,6 +9,8 @@ import { BusquedaManual } from './BusquedaManual'
 import { LectorDeCodigo } from './LectorDeCodigo'
 import { PosologiaDeLinea } from './PosologiaDeLinea'
 import { TramoDeLinea } from './TramoDeLinea'
+import { Emision } from './Emision'
+import { VIAS, type CodigoVia, type LineaParaEmitir } from '../dominio/emision'
 import { hoy as fechaDeHoy, type Tramo } from '../dominio/tramo'
 
 interface Props {
@@ -27,6 +29,8 @@ export function PantallaMeson({ api, puedeGuardarPlantillas, hoy = fechaDeHoy }:
   const [atencion, despachar] = useReducer(reducirAtencion, ATENCION_NUEVA)
   const [busqueda, setBusqueda] = useState<{ codigoNoEncontrado: string | null } | null>(null)
   const [consultas, setConsultas] = useState(0)
+  // Cambia con cada atención nueva, para que la emisión de la anterior no quede a la vista.
+  const [numeroDeAtencion, setNumeroDeAtencion] = useState(1)
   const lector = useRef<HTMLInputElement>(null)
 
   /** El campo del lector siempre existe; devolverle el foco deja listo el siguiente envase. */
@@ -52,6 +56,17 @@ export function PantallaMeson({ api, puedeGuardarPlantillas, hoy = fechaDeHoy }:
     despachar({ tipo: 'tramo', id: linea.id, tramo })
     volverAlLector()
   }
+
+  function nuevaAtencion() {
+    despachar({ tipo: 'nueva' })
+    setNumeroDeAtencion((n) => n + 1)
+    volverAlLector()
+  }
+
+  /** Las líneas listas para emitir, o null mientras a alguna le falte posología o entrega. */
+  const paraEmitir: LineaParaEmitir[] | null = atencion.lineas.every((l) => l.posologia !== null && l.tramo !== null)
+    ? atencion.lineas.map((l) => ({ producto: l.producto, posologia: l.posologia!, tramo: l.tramo!, via: l.via }))
+    : null
 
   function registrarPosologia(linea: Linea, posologia: Posologia, plantillaId: string | null) {
     despachar({ tipo: 'posologia', id: linea.id, posologia, plantillaId })
@@ -160,6 +175,20 @@ export function PantallaMeson({ api, puedeGuardarPlantillas, hoy = fechaDeHoy }:
                     Quitar
                   </button>
                 </div>
+                <div className="via">
+                  <label htmlFor={`linea-${linea.id}-via`}>Vía de administración</label>
+                  <select
+                    id={`linea-${linea.id}-via`}
+                    value={linea.via}
+                    onChange={(e) => despachar({ tipo: 'via', id: linea.id, via: e.target.value as CodigoVia })}
+                  >
+                    {Object.entries(VIAS).map(([codigo, nombre]) => (
+                      <option key={codigo} value={codigo}>
+                        {nombre}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <PosologiaDeLinea
                   linea={linea}
                   api={api}
@@ -178,6 +207,16 @@ export function PantallaMeson({ api, puedeGuardarPlantillas, hoy = fechaDeHoy }:
           </ol>
         )}
       </section>
+
+      {atencion.lineas.length > 0 && (
+        <Emision
+          key={numeroDeAtencion}
+          api={api}
+          lineas={paraEmitir}
+          retiro={hoy()}
+          alTerminar={nuevaAtencion}
+        />
+      )}
     </div>
   )
 }

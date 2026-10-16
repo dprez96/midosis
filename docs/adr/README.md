@@ -24,3 +24,6 @@ nueva que la reemplaza, y la anterior queda marcada como sustituida.
 | ADR-013 | Claves públicas empaquetadas en la aplicación y actualizables | [013-claves-publicas-empaquetadas-en-la-aplicacion-y.md](013-claves-publicas-empaquetadas-en-la-aplicacion-y.md) |
 | ADR-014 | Bitácora de auditoría encadenada por hash | [014-bitacora-de-auditoria-encadenada-por-hash.md](014-bitacora-de-auditoria-encadenada-por-hash.md) |
 | ADR-015 | Las alarmas de toma se programan con setAlarmClock | [015-alarmas-con-setalarmclock.md](015-alarmas-con-setalarmclock.md) |
+| ADR-016 | Formato del sobre: prefijo, COSE etiquetado y claves por función (propuesta) | [016-formato-del-sobre-y-claves.md](016-formato-del-sobre-y-claves.md) |
+| ADR-017 | La aplicación usa Internet solo para el canje con código corto (propuesta) | [017-internet-solo-para-el-canje.md](017-internet-solo-para-el-canje.md) |
+| ADR-018 | El QR se lee con ZXing y CameraX, no con ML Kit (propuesta) | [018-lectura-del-qr-con-zxing.md](018-lectura-del-qr-con-zxing.md) |
