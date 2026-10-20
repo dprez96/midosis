@@ -37,6 +37,7 @@ import cl.midosis.paciente.rutina.RutinaGuardada
 import cl.midosis.paciente.tratamiento.AlmacenDeTratamientos
 import cl.midosis.paciente.tratamiento.TratamientoGuardado
 import cl.midosis.paciente.tratamiento.Resumen
+import cl.midosis.paciente.alarmas.Diagnostico
 import cl.midosis.paciente.alarmas.PlanDeAlarmas
 import cl.midosis.paciente.alarmas.ProgramadorDeAlarmas
 import cl.midosis.paciente.tratamiento.Planificacion
@@ -93,7 +94,8 @@ fun AppPaciente() {
         val ahora = LocalDateTime.now()
         val tomas = Planificacion.tomasDe(t, conRutina.rutina, ahora)
         val programadas = programador.programar(PlanDeAlarmas.construir(tomas, ahora), ahora)
-        pantalla = if (programadas == 0) Pantalla.Permisos else Pantalla.Inicio
+        // También si quedaron programadas pero el ahorro de batería puede retrasarlas (HU-24).
+        pantalla = if (programadas == 0 || !Diagnostico.del(contexto).todoEnOrden) Pantalla.Permisos else Pantalla.Inicio
     }
 
     fun guardarRutina(guardada: RutinaGuardada) {
@@ -111,6 +113,7 @@ fun AppPaciente() {
             alCargar = { pantalla = Pantalla.Escanear },
             alAjustarRutina = { pantalla = Pantalla.Entrevistar(rutina?.let { Entrevista.desde(it.rutina) } ?: Entrevista()) },
             alAbrirPruebas = { pantalla = Pantalla.Pruebas },
+            alRevisarPermisos = { pantalla = Pantalla.Permisos },
         )
         Pantalla.Escanear -> Marco("Carga tu tratamiento") {
             Text("Apunta la cámara al código impreso en el comprobante de la farmacia.")
@@ -179,6 +182,7 @@ private fun Inicio(
     alCargar: () -> Unit,
     alAjustarRutina: () -> Unit,
     alAbrirPruebas: () -> Unit,
+    alRevisarPermisos: () -> Unit,
 ) {
     Marco("MiDosis") {
         if (tratamientos.isEmpty()) {
@@ -189,7 +193,7 @@ private fun Inicio(
             tratamientos.forEach { t ->
                 t.carga.productos.forEach { p -> TarjetaDeMedicamento(Resumen.de(p, t.carga.emitidoEn, hoy)) }
             }
-            ProximaToma()
+            ProximaToma(alRevisar = alRevisarPermisos)
             Text(LEYENDA, style = MaterialTheme.typography.bodySmall)
         }
         Button(onClick = alCargar, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
