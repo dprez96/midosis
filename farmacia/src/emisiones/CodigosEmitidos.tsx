@@ -7,7 +7,13 @@ interface Props {
 
 type Carga = { tipo: 'cargando' } | { tipo: 'lista'; emisiones: EmisionReciente[] } | { tipo: 'fallo'; mensaje: string }
 
-const HORA = new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+const HORA = new Intl.DateTimeFormat('es-CL', {
+  day: '2-digit',
+  month: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+})
 
 export const MOTIVO_MINIMO = 3
 export const MOTIVO_MAXIMO = 200
