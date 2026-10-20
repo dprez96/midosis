@@ -57,3 +57,6 @@ credenciales*.json
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Claves de producción de la app: se generan al compilar (infra/kms), nunca se versionan.
+paciente/app/src/release/assets/claves-de-confianza.json

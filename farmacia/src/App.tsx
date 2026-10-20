@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import type { ApiDelMeson } from './api/cliente'
+import { CodigosEmitidos } from './emisiones/CodigosEmitidos'
 import { PantallaMeson } from './meson/PantallaMeson'
 import { PantallaIngreso } from './sesion/PantallaIngreso'
 import { NOMBRE_DEL_ROL, type Perfil, type ServicioDeSesion } from './sesion/sesion'
@@ -29,11 +31,41 @@ export function App({ servicio, api }: Props) {
       <Encabezado perfil={perfil} cerrar={servicio.cerrar} />
       <main className="contenido">
         {perfil.comuna && perfil.rol ? (
-          <PantallaMeson api={api} puedeGuardarPlantillas={perfil.rol === 'qf'} />
+          <Secciones api={api} puedeGuardarPlantillas={perfil.rol === 'qf'} />
         ) : (
           <PerfilIncompleto />
         )}
       </main>
+    </>
+  )
+}
+
+type Seccion = 'meson' | 'emitidos'
+
+/**
+ * El mesón y los códigos emitidos. El mesón sigue montado mientras se revisan los códigos:
+ * volver a él no pierde la atención en curso.
+ */
+function Secciones({ api, puedeGuardarPlantillas }: { api: ApiDelMeson; puedeGuardarPlantillas: boolean }) {
+  const [seccion, setSeccion] = useState<Seccion>('meson')
+  return (
+    <>
+      <nav className="secciones" aria-label="Secciones">
+        <button type="button" aria-current={seccion === 'meson' ? 'page' : undefined} onClick={() => setSeccion('meson')}>
+          Atención en el mesón
+        </button>
+        <button
+          type="button"
+          aria-current={seccion === 'emitidos' ? 'page' : undefined}
+          onClick={() => setSeccion('emitidos')}
+        >
+          Códigos emitidos
+        </button>
+      </nav>
+      <div hidden={seccion !== 'meson'}>
+        <PantallaMeson api={api} puedeGuardarPlantillas={puedeGuardarPlantillas} />
+      </div>
+      {seccion === 'emitidos' && <CodigosEmitidos api={api} />}
     </>
   )
 }

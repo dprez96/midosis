@@ -33,7 +33,24 @@ export interface ApiDeEmision {
   emitir(lineas: LineaParaEmitir[], consentimiento: Consentimiento): Promise<CodigoEmitido>
 }
 
-export type ApiDelMeson = ApiDeCatalogo & ApiDePlantillas & ApiDeEmision
+/** Una emisión de la comuna que todavía se puede canjear (HU-07). */
+export interface EmisionReciente {
+  id: string
+  emitidaEn: string
+  expiraEn: string
+  /** Nombres de los productos, para que el mesón reconozca la atención. */
+  productos: string[]
+  revocadaEn: string | null
+}
+
+export interface ApiDeRevocacion {
+  /** Las emisiones vigentes o recién revocadas de la comuna, de la más nueva a la más antigua. */
+  recientes(): Promise<EmisionReciente[]>
+  /** Core responde 409 si ya estaba revocada o venció, y 404 si no existe en la comuna. */
+  revocar(id: string, motivo: string): Promise<void>
+}
+
+export type ApiDelMeson = ApiDeCatalogo & ApiDePlantillas & ApiDeEmision & ApiDeRevocacion
 
 const MENSAJES_POR_ESTADO: Record<number, string> = {
   401: 'La sesión expiró. Vuelva a iniciar sesión.',
@@ -105,6 +122,17 @@ export function crearApi(obtenerToken: ObtenerToken, base = '/api'): ApiDelMeson
       return pedir<CodigoEmitido>('/emisiones', {
         method: 'POST',
         body: JSON.stringify(peticionDeEmision(lineas, consentimiento)),
+      })
+    },
+
+    recientes() {
+      return pedir<EmisionReciente[]>('/emisiones/recientes')
+    },
+
+    async revocar(id, motivo) {
+      await pedir<unknown>(`/emisiones/${encodeURIComponent(id)}/revocacion`, {
+        method: 'POST',
+        body: JSON.stringify({ motivo }),
       })
     },
   }

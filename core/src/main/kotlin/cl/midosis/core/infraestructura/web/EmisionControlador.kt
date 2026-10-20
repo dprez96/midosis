@@ -1,6 +1,9 @@
 package cl.midosis.core.infraestructura.web
 
 import cl.midosis.core.aplicacion.emision.EmisionDeCodigos
+import cl.midosis.core.aplicacion.emision.RevocacionDeCodigos
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 import cl.midosis.core.dominio.catalogo.Gtin
 import cl.midosis.core.dominio.emision.CodigoEmitido
 import cl.midosis.core.dominio.emision.Consentimiento
@@ -31,7 +34,7 @@ import org.springframework.web.bind.annotation.RestController
 /** Emisión del código al cerrar la atención en el mesón (HU-01, HU-05). */
 @RestController
 @RequestMapping("/api/emisiones")
-class EmisionControlador(private val emision: EmisionDeCodigos) {
+class EmisionControlador(private val emision: EmisionDeCodigos, private val revocacion: RevocacionDeCodigos) {
 
     data class LineaPeticion(
         val gtin: String?,
@@ -67,6 +70,31 @@ class EmisionControlador(private val emision: EmisionDeCodigos) {
         )
         val emitido = emision.emitir(ResolutorDeComuna.desde(jwt), autor, solicitud)
         return ResponseEntity.status(HttpStatus.CREATED).body(Respuesta.de(emitido))
+    }
+
+    /** Las emisiones recientes de la comuna, para revocar una emitida por error (HU-07). */
+    @GetMapping("/recientes")
+    fun recientes(@AuthenticationPrincipal jwt: Jwt): List<RevocacionDeCodigos.Reciente> =
+        revocacion.recientes(ResolutorDeComuna.desde(jwt))
+
+    data class RevocacionPeticion(val motivo: String?)
+
+    @PostMapping("/{id}/revocacion")
+    fun revocar(
+        @AuthenticationPrincipal jwt: Jwt,
+        @PathVariable id: String,
+        @RequestBody peticion: RevocacionPeticion,
+    ): ResponseEntity<Map<String, String>> {
+        val autor = jwt.subject?.takeIf { it.isNotBlank() } ?: throw ComunaNoResuelta("el token no identifica a su usuario")
+        val motivo = peticion.motivo ?: throw EmisionInvalida("indique el motivo de la revocación")
+        return when (revocacion.revocar(ResolutorDeComuna.desde(jwt), id, autor, motivo)) {
+            RevocacionDeCodigos.Resultado.Revocada -> ResponseEntity.ok(mapOf("estado" to "revocada"))
+            RevocacionDeCodigos.Resultado.NoEncontrada -> ResponseEntity.notFound().build()
+            RevocacionDeCodigos.Resultado.YaRevocada ->
+                ResponseEntity.status(HttpStatus.CONFLICT).body(mapOf("error" to "Ese código ya estaba revocado."))
+            RevocacionDeCodigos.Resultado.Vencida ->
+                ResponseEntity.status(HttpStatus.CONFLICT).body(mapOf("error" to "Ese código ya venció: no se puede canjear."))
+        }
     }
 
     private fun linea(l: LineaPeticion) = LineaDeEmision(
