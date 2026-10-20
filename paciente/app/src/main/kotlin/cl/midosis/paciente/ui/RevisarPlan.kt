@@ -2,6 +2,7 @@ package cl.midosis.paciente.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -88,33 +89,33 @@ fun RevisarPlan(inicial: RevisionDelPlan, alConfirmar: (RevisionDelPlan) -> Unit
 @Composable
 private fun HoraDeToma(momento: LocalDateTime, etiqueta: String, alMover: (Long) -> Unit) {
     val nombre = "$etiqueta, ${dia(momento.toLocalDate())} a las ${momento.format(HORA)}"
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Ajuste("−1 h", "$nombre: una hora antes") { alMover(-60) }
-        Ajuste("−15", "$nombre: 15 minutos antes") { alMover(-15) }
-        Column(Modifier.weight(1f)) {
-            Text(
-                dia(momento.toLocalDate()),
-                style = MaterialTheme.typography.labelLarge,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Text(
-                momento.format(HORA),
-                style = MaterialTheme.typography.headlineMedium,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite },
-            )
+    // La hora arriba y los botones abajo, repartidos en el ancho: con letra grande, cuatro
+    // botones al lado de la hora no caben en un teléfono.
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            "${dia(momento.toLocalDate())}, ${momento.format(HORA)}",
+            style = MaterialTheme.typography.headlineSmall,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite },
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+            Ajuste("−1 h", "$nombre: una hora antes", Modifier.weight(1f)) { alMover(-60) }
+            Ajuste("−15", "$nombre: 15 minutos antes", Modifier.weight(1f)) { alMover(-15) }
+            Ajuste("+15", "$nombre: 15 minutos después", Modifier.weight(1f)) { alMover(15) }
+            Ajuste("+1 h", "$nombre: una hora después", Modifier.weight(1f)) { alMover(60) }
         }
-        Ajuste("+15", "$nombre: 15 minutos después") { alMover(15) }
-        Ajuste("+1 h", "$nombre: una hora después") { alMover(60) }
     }
 }
 
 /** El lector de pantalla dice qué hace el botón, no «más quince». */
 @Composable
-private fun Ajuste(texto: String, descripcion: String, alTocar: () -> Unit) {
-    OutlinedButton(onClick = alTocar, modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = descripcion }) {
-        Text(texto)
+private fun Ajuste(texto: String, descripcion: String, modifier: Modifier, alTocar: () -> Unit) {
+    OutlinedButton(
+        onClick = alTocar,
+        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
+        modifier = modifier.heightIn(min = 48.dp).semantics { contentDescription = descripcion },
+    ) {
+        Text(texto, maxLines = 1, softWrap = false)
     }
 }
 

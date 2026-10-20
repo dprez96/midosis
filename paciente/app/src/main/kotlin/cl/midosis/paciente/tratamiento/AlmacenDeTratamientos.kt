@@ -32,6 +32,9 @@ class AlmacenDeTratamientos(private val archivo: ArchivoCifrado) {
 
     fun leer(): List<TratamientoGuardado> = archivo.leer()?.let(FormatoDeTratamientos::leer) ?: emptyList()
 
+    /** Si el código ya se cargó en este teléfono. */
+    fun contiene(id: String): Boolean = leer().any { it.carga.id == id }
+
     fun guardar(nuevo: TratamientoGuardado): Resultado = synchronized(this) {
         val actuales = leer()
         if (actuales.any { it.carga.id == nuevo.carga.id }) return Resultado.YaCargado
