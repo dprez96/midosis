@@ -183,6 +183,26 @@ button.enlace {
   text-underline-offset: 3px;
 }
 
+/* ---------------------------------------------------------------- secciones */
+
+.secciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.secciones button[aria-current='page'] {
+  color: #ffffff;
+  background: var(--primario);
+  border-color: var(--primario);
+}
+
+.revocacion {
+  display: grid;
+  gap: 8px;
+}
+
 /* ---------------------------------------------------------------- avisos */
 
 .estado:empty {
