@@ -183,6 +183,26 @@ button.enlace {
   text-underline-offset: 3px;
 }
 
+/* ---------------------------------------------------------------- secciones */
+
+.secciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.secciones button[aria-current='page'] {
+  color: #ffffff;
+  background: var(--primario);
+  border-color: var(--primario);
+}
+
+.revocacion {
+  display: grid;
+  gap: 8px;
+}
+
 /* ---------------------------------------------------------------- avisos */
 
 .estado:empty {
@@ -383,8 +403,23 @@ button.enlace {
   margin: 0;
 }
 
-/* Al imprimir solo sale el comprobante: el QR a 32 mm, sobre el mínimo de 25 mm de la tabla 87. */
+/*
+ * Al imprimir solo sale el comprobante, en el rollo de 80 mm de la impresora térmica del mesón:
+ * su ancho imprimible es de 72 mm (576 puntos a 203 ppp). Una sola columna, todo en negro (el
+ * gris sale tramado) y el QR a lo ancho del papel, muy por sobre el mínimo de 25 mm de la tabla
+ * 87: mientras más grande, mejor lo lee la cámara de un teléfono antiguo. La zona tranquila de
+ * 4 módulos ya viene dentro del dibujo. El largo de la hoja lo pone el controlador de la
+ * impresora (rollo continuo): aquí solo se quitan los márgenes.
+ */
+@page {
+  margin: 0;
+}
+
 @media print {
+  body {
+    background: #fff;
+  }
+
   body * {
     visibility: hidden;
   }
@@ -392,21 +427,60 @@ button.enlace {
   .comprobante,
   .comprobante * {
     visibility: visible;
+    color: #000;
   }
 
   .comprobante {
     position: absolute;
-    inset: 0;
+    top: 0;
+    left: 0;
+    width: 72mm;
+    margin: 0 4mm;
+    padding: 2mm 0 6mm;
+    gap: 3mm;
     border: none;
+    border-radius: 0;
     box-shadow: none;
+    background: #fff;
+    font-size: 10pt;
+    line-height: 1.3;
+  }
+
+  .comprobante h2 {
+    font-size: 11pt;
+    text-align: center;
+  }
+
+  .comprobante .qr-y-respaldo {
+    display: block;
+  }
+
+  .codigo-qr {
+    display: block;
+    width: 72mm;
+    height: 72mm;
+  }
+
+  .comprobante .qr-y-respaldo p {
+    margin-top: 1.5mm;
+    text-align: center;
+  }
+
+  .comprobante .secundario {
+    font-size: inherit;
+  }
+
+  .codigo-corto {
+    font-size: 13pt;
+    white-space: nowrap;
+  }
+
+  .lineas-comprobante {
+    gap: 2mm;
+    padding-left: 5mm;
   }
 
   .comprobante .no-imprimir {
     display: none;
-  }
-
-  .codigo-qr {
-    width: 32mm;
-    height: 32mm;
   }
 }

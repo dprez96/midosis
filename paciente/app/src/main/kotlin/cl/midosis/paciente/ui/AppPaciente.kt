@@ -37,9 +37,11 @@ import cl.midosis.paciente.rutina.RutinaGuardada
 import cl.midosis.paciente.tratamiento.AlmacenDeTratamientos
 import cl.midosis.paciente.tratamiento.TratamientoGuardado
 import cl.midosis.paciente.tratamiento.Resumen
+import cl.midosis.paciente.alarmas.Diagnostico
 import cl.midosis.paciente.alarmas.PlanDeAlarmas
 import cl.midosis.paciente.alarmas.ProgramadorDeAlarmas
 import cl.midosis.paciente.tratamiento.Planificacion
+import cl.midosis.paciente.tratamiento.RevisionDelPlan
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.LocalDate
@@ -56,6 +58,7 @@ private sealed interface Pantalla {
     data class Entrevistar(val entrevista: Entrevista) : Pantalla
     data object Pruebas : Pantalla
     data object Permisos : Pantalla
+    data class Revisar(val tratamiento: TratamientoGuardado, val revision: RevisionDelPlan) : Pantalla
 }
 
 /**
@@ -76,7 +79,6 @@ fun AppPaciente() {
     var porProgramar by remember { mutableStateOf<TratamientoGuardado?>(null) }
     val programador = remember { ProgramadorDeAlarmas(contexto) }
 
-    BackHandler(enabled = pantalla != Pantalla.Inicio) { pantalla = Pantalla.Inicio }
 
     fun leerCodigo(texto: String) {
         pantalla = when (val lectura = lector.leer(texto.trim())) {
@@ -85,15 +87,29 @@ fun AppPaciente() {
         }
     }
 
+    /** Propone el calendario y lo muestra para que el paciente lo revise antes de activarlo (HU-14). */
+    fun revisarPlan(t: TratamientoGuardado, conRutina: RutinaGuardada) {
+        pantalla = Pantalla.Revisar(t, RevisionDelPlan(Planificacion.proponer(t, conRutina.rutina, LocalDateTime.now())))
+    }
+
     /**
-     * Programa las alarmas del tramo cubierto (HU-08). Si no quedó ninguna, faltan permisos: se
-     * dice, porque el sistema nunca debe aparentar estar activo sin estarlo (CU-P-03).
+     * Guarda el tratamiento con el plan ya revisado y programa las alarmas del tramo cubierto
+     * (HU-08). Se guarda recién aquí: si la aplicación se cierra durante la revisión no queda un
+     * tratamiento sin alarmas, y basta con volver a escanear el código. Si no quedó ninguna
+     * alarma, faltan permisos: se dice, porque el sistema nunca debe aparentar estar activo sin
+     * estarlo (CU-P-03).
      */
-    fun programarAlarmas(t: TratamientoGuardado, conRutina: RutinaGuardada) {
+    fun programarAlarmas(t: TratamientoGuardado, revision: RevisionDelPlan) {
+        if (tratamientos.guardar(t) == AlmacenDeTratamientos.Resultado.YaCargado) {
+            pantalla = Pantalla.YaCargado
+            return
+        }
+        lista = tratamientos.leer()
         val ahora = LocalDateTime.now()
-        val tomas = Planificacion.tomasDe(t, conRutina.rutina, ahora)
+        val tomas = Planificacion.tomasDe(t, revision.planes)
         val programadas = programador.programar(PlanDeAlarmas.construir(tomas, ahora), ahora)
-        pantalla = if (programadas == 0) Pantalla.Permisos else Pantalla.Inicio
+        // También si quedaron programadas pero el ahorro de batería puede retrasarlas (HU-24).
+        pantalla = if (programadas == 0 || !Diagnostico.del(contexto).todoEnOrden) Pantalla.Permisos else Pantalla.Inicio
     }
 
     fun guardarRutina(guardada: RutinaGuardada) {
@@ -101,7 +117,15 @@ fun AppPaciente() {
         rutina = guardada
         val pendiente = porProgramar
         porProgramar = null
-        if (pendiente != null) programarAlarmas(pendiente, guardada) else pantalla = Pantalla.Inicio
+        if (pendiente != null) revisarPlan(pendiente, guardada) else pantalla = Pantalla.Inicio
+    }
+
+    BackHandler(enabled = pantalla != Pantalla.Inicio) {
+        // Salir de la revisión no deja el tratamiento sin alarmas: se activan las propuestas.
+        when (val p = pantalla) {
+            is Pantalla.Revisar -> programarAlarmas(p.tratamiento, p.revision)
+            else -> pantalla = Pantalla.Inicio
+        }
     }
 
     when (val p = pantalla) {
@@ -111,6 +135,7 @@ fun AppPaciente() {
             alCargar = { pantalla = Pantalla.Escanear },
             alAjustarRutina = { pantalla = Pantalla.Entrevistar(rutina?.let { Entrevista.desde(it.rutina) } ?: Entrevista()) },
             alAbrirPruebas = { pantalla = Pantalla.Pruebas },
+            alRevisarPermisos = { pantalla = Pantalla.Permisos },
         )
         Pantalla.Escanear -> Marco("Carga tu tratamiento") {
             Text("Apunta la cámara al código impreso en el comprobante de la farmacia.")
@@ -126,21 +151,16 @@ fun AppPaciente() {
             carga = p.lectura.carga,
             alGuardar = {
                 val nuevo = TratamientoGuardado(p.lectura.carga, Instant.now().epochSecond, p.lectura.kid)
-                pantalla = when (tratamientos.guardar(nuevo)) {
-                    AlmacenDeTratamientos.Resultado.YaCargado -> Pantalla.YaCargado
-                    AlmacenDeTratamientos.Resultado.Guardado -> {
-                        lista = tratamientos.leer()
-                        val conRutina = rutina
-                        if (conRutina == null) {
-                            // Con el primer tratamiento se pregunta la rutina (CU-P-02), y las
-                            // alarmas se programan al terminar la entrevista.
-                            porProgramar = nuevo
-                            Pantalla.Entrevistar(Entrevista())
-                        } else {
-                            programarAlarmas(nuevo, conRutina)
-                            pantalla
-                        }
+                val conRutina = rutina
+                when {
+                    tratamientos.contiene(nuevo.carga.id) -> pantalla = Pantalla.YaCargado
+                    conRutina == null -> {
+                        // Con el primer tratamiento se pregunta la rutina (CU-P-02); el plan se
+                        // revisa y se guarda al terminar la entrevista.
+                        porProgramar = nuevo
+                        pantalla = Pantalla.Entrevistar(Entrevista())
                     }
+                    else -> revisarPlan(nuevo, conRutina)
                 }
             },
             alCancelar = { pantalla = Pantalla.Inicio },
@@ -162,6 +182,11 @@ fun AppPaciente() {
             alTerminar = { guardarRutina(RutinaGuardada(it, porDefecto = false)) },
             alOmitir = { guardarRutina(RutinaGuardada(Rutina.POR_DEFECTO, porDefecto = true)) },
         )
+        is Pantalla.Revisar -> RevisarPlan(
+            inicial = p.revision,
+            alConfirmar = { programarAlarmas(p.tratamiento, it) },
+            alUsarPropuesto = { programarAlarmas(p.tratamiento, p.revision) },
+        )
         Pantalla.Permisos -> PermisosDeAlarmas(
             alListo = { programador.reprogramarGuardadas(); pantalla = Pantalla.Inicio },
         )
@@ -179,6 +204,7 @@ private fun Inicio(
     alCargar: () -> Unit,
     alAjustarRutina: () -> Unit,
     alAbrirPruebas: () -> Unit,
+    alRevisarPermisos: () -> Unit,
 ) {
     Marco("MiDosis") {
         if (tratamientos.isEmpty()) {
@@ -189,7 +215,7 @@ private fun Inicio(
             tratamientos.forEach { t ->
                 t.carga.productos.forEach { p -> TarjetaDeMedicamento(Resumen.de(p, t.carga.emitidoEn, hoy)) }
             }
-            ProximaToma()
+            ProximaToma(alRevisar = alRevisarPermisos)
             Text(LEYENDA, style = MaterialTheme.typography.bodySmall)
         }
         Button(onClick = alCargar, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {

@@ -76,6 +76,26 @@ describe('crearApi', () => {
     expect(JSON.parse(String(opciones?.body))).toEqual(posologia)
   })
 
+  it('revoca enviando el motivo y codifica el identificador', async () => {
+    fetchSimulado.mockResolvedValue(respuesta(200, { estado: 'revocada' }))
+
+    await api.revocar('01M0877000WQNC8FHDYAA6Y83C', 'Posología equivocada')
+
+    const [url, opciones] = fetchSimulado.mock.calls[0]!
+    expect(url).toBe('/api/emisiones/01M0877000WQNC8FHDYAA6Y83C/revocacion')
+    expect(opciones?.method).toBe('POST')
+    expect(JSON.parse(String(opciones?.body))).toEqual({ motivo: 'Posología equivocada' })
+  })
+
+  it('una revocación rechazada muestra el motivo de core', async () => {
+    fetchSimulado.mockResolvedValue(respuesta(409, { error: 'Ese código ya estaba revocado.' }))
+
+    await expect(api.revocar('x', 'Error de digitación')).rejects.toMatchObject({
+      estado: 409,
+      message: 'Ese código ya estaba revocado.',
+    })
+  })
+
   it('distingue la falta de conexión', async () => {
     fetchSimulado.mockRejectedValue(new TypeError('Failed to fetch'))
 

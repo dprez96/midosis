@@ -86,7 +86,7 @@ class EmisionDeCodigos(
         contexto.en(comuna) {
             emisiones.registrar(carga, autor, firmante.kid, solicitud.consentimiento)
         }
-        val registrado = canje.registrar(comuna, codigo, Instant.ofEpochSecond(expira))
+        val registrado = canje.registrar(comuna, codigo, Instant.ofEpochSecond(expira), carga.id)
         return CodigoEmitido(carga.id, codigo, registrado.codigoCorto.agrupado, registrado.pin.valor, Instant.ofEpochSecond(expira))
     }
 
