@@ -14,14 +14,12 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
@@ -36,26 +34,20 @@ import java.time.format.DateTimeFormatter
 
 /**
  * Revisión del calendario propuesto antes de programar las alarmas (HU-14, CU-P-03). Cada toma
- * se corre de a 15 minutos o de a una hora. Por omisión se mueven también las siguientes, que
- * es lo que casi siempre se quiere; mover una sola respeta el intervalo de la posología y, si
- * no se puede, el motor explica por qué.
+ * se corre de a 15 minutos o de a una hora, y con ella todas las del mismo medicamento: así el
+ * intervalo de la posología se mantiene siempre.
  */
 @Composable
 fun RevisarPlan(inicial: RevisionDelPlan, alConfirmar: (RevisionDelPlan) -> Unit, alUsarPropuesto: () -> Unit) {
     var revision by remember { mutableStateOf(inicial) }
-    var conLasSiguientes by remember { mutableStateOf(true) }
 
     Column(
         modifier = Modifier.safeDrawingPadding().padding(20.dp).verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Text("Revisa las horas de tus tomas", style = MaterialTheme.typography.headlineMedium)
-        Text("Las propusimos según tus horarios. Si alguna no te acomoda, muévela antes de activar las alarmas.")
-
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-            Text("Mover también las tomas siguientes", modifier = Modifier.weight(1f))
-            Switch(checked = conLasSiguientes, onCheckedChange = { conLasSiguientes = it })
-        }
+        Text("Las propusimos según tus horarios. Si no te acomodan, muévelas antes de activar las alarmas.")
+        Text("Al mover una toma se mueven todas las de ese medicamento, para que el tiempo entre ellas no cambie.")
 
         revision.planes.forEachIndexed { i, p ->
             Card(Modifier.fillMaxWidth()) {
@@ -64,7 +56,7 @@ fun RevisarPlan(inicial: RevisionDelPlan, alConfirmar: (RevisionDelPlan) -> Unit
                     Text(p.dosis)
                     revision.visibles(i).forEach { t ->
                         HoraDeToma(p.plan.tomas[t], p.etiqueta) { minutos ->
-                            revision = revision.mover(i, t, minutos, conLasSiguientes, LocalDateTime.now())
+                            revision = revision.mover(i, minutos, LocalDateTime.now())
                         }
                     }
                     revision.avisos[i]?.let {
