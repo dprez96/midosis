@@ -39,10 +39,11 @@ class RevisionDelPlanTest {
     }
 
     @Test
-    fun `mover una toma con las siguientes corre todo el tramo y se acepta`() {
-        val movida = revision.mover(0, 0, 60, conLasSiguientes = true, ahora)
+    fun `mover una toma corre todas las del medicamento y conserva el intervalo`() {
+        val movida = revision.mover(0, 60, ahora)
         val tomas = movida.planes[0].plan.tomas
         assertEquals(LocalDateTime.of(2026, 10, 14, 21, 0), tomas.first())
+        assertEquals(LocalDateTime.of(2026, 10, 15, 9, 0), tomas[1])
         assertEquals(LocalDateTime.of(2026, 11, 13, 9, 0), tomas.last())
         assertEquals(60, tomas.size)
         assertTrue(movida.avisos.isEmpty())
@@ -51,27 +52,23 @@ class RevisionDelPlanTest {
     }
 
     @Test
-    fun `acercar una toma sola a la siguiente se impide y explica el intervalo`() {
-        val movida = revision.mover(0, 0, 60, conLasSiguientes = false, ahora)
+    fun `dejar la primera toma en el pasado se impide y se explica`() {
+        val movida = revision.mover(0, -11 * 60, ahora)
         assertEquals(revision.planes, movida.planes)
-        assertEquals(
-            "Tu medicamento es cada 12 horas: dos tomas no pueden quedar a menos de 12 horas. " +
-                "Para cambiar la hora, mueve también las tomas siguientes.",
-            movida.avisos[0],
-        )
+        assertEquals("La primera toma no puede quedar antes de ahora.", movida.avisos[0])
     }
 
     @Test
     fun `un cambio aceptado borra el aviso anterior de ese medicamento`() {
-        val rechazada = revision.mover(0, 0, 60, conLasSiguientes = false, ahora)
-        val aceptada = rechazada.mover(0, 0, -30, conLasSiguientes = false, ahora)
+        val rechazada = revision.mover(0, -11 * 60, ahora)
+        val aceptada = rechazada.mover(0, -30, ahora)
         assertNull(aceptada.avisos[0])
         assertEquals(LocalDateTime.of(2026, 10, 14, 19, 30), aceptada.planes[0].plan.tomas.first())
     }
 
     @Test
     fun `las tomas confirmadas son las del plan revisado`() {
-        val movida = revision.mover(1, 0, -15, conLasSiguientes = true, ahora)
+        val movida = revision.mover(1, -15, ahora)
         val tomas = Planificacion.tomasDe(tratamiento, movida.planes)
         assertEquals(90, tomas.size)
         assertEquals(movida.planes[1].plan.tomas.first(), tomas.filter { it.producto == "Atorvastatina" }.minOf { it.momento })
