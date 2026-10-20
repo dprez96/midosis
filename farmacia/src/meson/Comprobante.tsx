@@ -12,7 +12,13 @@ interface Props {
   alTerminar: () => void
 }
 
-const VENCE = new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+const VENCE = new Intl.DateTimeFormat('es-CL', {
+  day: '2-digit',
+  month: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+})
 
 /**
  * El comprobante que se imprime y se entrega con el medicamento (HU-01, tabla 87 del informe):
@@ -33,7 +39,7 @@ export function Comprobante({ emitido, lineas, retiro, alTerminar }: Props) {
             Si no se puede leer, ingrese el código <strong className="codigo-corto">{emitido.codigoCorto}</strong> y el
             PIN <strong className="codigo-corto">{emitido.pin}</strong>.
           </p>
-          <p className="secundario">Cárguelo antes del {VENCE.format(new Date(emitido.expiraEn))}.</p>
+          <p className="secundario">Cárguelo antes del {VENCE.format(new Date(emitido.expiraEn))} h.</p>
         </div>
       </div>
       <ol className="lineas-comprobante">
