@@ -71,6 +71,12 @@ export function catalogoFalso(
     async emitir() {
       throw new Error('este catálogo falso no emite')
     },
+    async recientes() {
+      return []
+    },
+    async revocar() {
+      throw new Error('este catálogo falso no revoca')
+    },
     async crearPlantilla(gtin, posologia) {
       creadas.push({ gtin, posologia })
       const creada = { ...posologia, id: `creada-${creadas.length}` }

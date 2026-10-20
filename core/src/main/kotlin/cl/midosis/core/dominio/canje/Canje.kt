@@ -47,6 +47,8 @@ data class Sobre(
     val intentosVentana: Int,
     val ventanaDesde: Instant?,
     val fallidos: Int,
+    /** La emisión de la que salió, para destruir el sobre si se revoca (HU-07). */
+    val emision: String? = null,
 )
 
 sealed interface ResultadoDeCanje {
@@ -75,4 +77,7 @@ interface RepositorioDeSobres {
     fun registrarIntento(codigo: CodigoCorto, intentosVentana: Int, ventanaDesde: Instant, fallidos: Int)
 
     fun destruir(codigo: CodigoCorto)
+
+    /** Solo dentro del contexto de la comuna emisora. Devuelve cuántos sobres destruyó. */
+    fun destruirDeEmision(emision: String): Int
 }
