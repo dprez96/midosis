@@ -31,7 +31,7 @@ class CanjeDeCodigos(
 
     data class Registrado(val codigoCorto: CodigoCorto, val pin: Pin)
 
-    fun registrar(comuna: CodigoComuna, codigo: String, expiraEn: Instant): Registrado {
+    fun registrar(comuna: CodigoComuna, codigo: String, expiraEn: Instant, emision: String? = null): Registrado {
         val pin = Pin.generar(aleatorio)
         val sal = ByteArray(16).also(aleatorio::nextBytes)
         val derivado = pin.derivar(sal)
@@ -40,7 +40,7 @@ class CanjeDeCodigos(
             val corto = CodigoCorto.generar(aleatorio)
             try {
                 comunas.en(comuna) {
-                    sobres.guardar(Sobre(corto, comuna, codigo, derivado, sal, expiraEn, 0, null, 0))
+                    sobres.guardar(Sobre(corto, comuna, codigo, derivado, sal, expiraEn, 0, null, 0, emision))
                 }
                 return Registrado(corto, pin)
             } catch (e: DuplicateKeyException) {

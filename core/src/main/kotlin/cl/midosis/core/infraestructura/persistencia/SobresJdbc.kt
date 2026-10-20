@@ -28,14 +28,15 @@ class SobresJdbc(private val jdbc: JdbcClient) : RepositorioDeSobres {
             intentosVentana = rs.getInt("intentos_ventana"),
             ventanaDesde = rs.getTimestamp("ventana_desde")?.toInstant(),
             fallidos = rs.getInt("fallidos"),
+            emision = rs.getString("emision"),
         )
     }
 
     override fun guardar(sobre: Sobre) {
         jdbc.sql(
             """
-            INSERT INTO sobre (codigo_corto, comuna, codigo, pin_derivado, pin_sal, expira_en)
-            VALUES (:codigoCorto, :comuna, :codigo, :pinDerivado, :pinSal, :expiraEn)
+            INSERT INTO sobre (codigo_corto, comuna, codigo, pin_derivado, pin_sal, expira_en, emision)
+            VALUES (:codigoCorto, :comuna, :codigo, :pinDerivado, :pinSal, :expiraEn, :emision)
             """.trimIndent(),
         )
             .param("codigoCorto", sobre.codigoCorto.valor)
@@ -44,6 +45,7 @@ class SobresJdbc(private val jdbc: JdbcClient) : RepositorioDeSobres {
             .param("pinDerivado", sobre.pinDerivado)
             .param("pinSal", sobre.pinSal)
             .param("expiraEn", Timestamp.from(sobre.expiraEn))
+            .param("emision", sobre.emision)
             .update()
     }
 
@@ -67,6 +69,9 @@ class SobresJdbc(private val jdbc: JdbcClient) : RepositorioDeSobres {
             .param("codigo", codigo.valor)
             .update()
     }
+
+    override fun destruirDeEmision(emision: String): Int =
+        jdbc.sql("DELETE FROM sobre WHERE emision = :emision").param("emision", emision).update()
 
     override fun destruir(codigo: CodigoCorto) {
         jdbc.sql("DELETE FROM sobre WHERE codigo_corto = :codigo").param("codigo", codigo.valor).update()
