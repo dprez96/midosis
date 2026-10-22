@@ -1,6 +1,7 @@
 package cl.midosis.paciente.ui
 
 import android.Manifest
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -56,17 +57,8 @@ fun PermisosDeAlarmas(alListo: () -> Unit) {
         Modifier.safeDrawingPadding().padding(20.dp).verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Text(
-            if (d.alarmasGarantizadas) "Revisa el ahorro de batería" else "Falta un permiso para tus alarmas",
-            style = MaterialTheme.typography.headlineMedium,
-        )
-        Text(
-            if (d.alarmasGarantizadas) {
-                "Tus alarmas quedaron programadas, pero el teléfono podría retrasarlas para ahorrar batería."
-            } else {
-                "Tu tratamiento quedó guardado, pero las alarmas no sonarán hasta que des estos permisos."
-            },
-        )
+        Text(d.titulo, style = MaterialTheme.typography.headlineMedium)
+        Text(d.explicacion)
         if (!d.notificaciones) {
             Ajuste("Sin este permiso la alarma no se ve ni suena.", "Permitir notificaciones") {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) pedir.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -83,10 +75,18 @@ fun PermisosDeAlarmas(alListo: () -> Unit) {
         }
         if (!d.fueraDelAhorroDeBateria) {
             Ajuste(
-                "El ahorro de batería puede retrasar las alarmas. En la lista, busca MiDosis y elige «No optimizar» o «Sin restricciones».",
-                "Abrir el ahorro de batería",
+                "El ahorro de batería puede retrasar las alarmas. Toca el botón y elige «Permitir».",
+                "Quitar MiDosis del ahorro de batería",
             ) {
-                contexto.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                // El diálogo directo de Android: un solo toque. Si el teléfono no lo trae, se
+                // abre la lista general, donde hay que buscar MiDosis.
+                try {
+                    contexto.startActivity(
+                        Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:${contexto.packageName}")),
+                    )
+                } catch (e: ActivityNotFoundException) {
+                    contexto.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                }
             }
         }
         d.consejoDelFabricante?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }

@@ -28,6 +28,21 @@ data class Diagnostico(
 
     val todoEnOrden: Boolean get() = alarmasGarantizadas && fueraDelAhorroDeBateria
 
+    /** El título de la pantalla de permisos: dice lo que falta, o que no falta nada. */
+    val titulo: String
+        get() = when {
+            !alarmasGarantizadas -> "Falta un permiso para tus alarmas"
+            !fueraDelAhorroDeBateria -> "Revisa el ahorro de batería"
+            else -> "Tus alarmas están listas"
+        }
+
+    val explicacion: String
+        get() = when {
+            !alarmasGarantizadas -> "Tu tratamiento quedó guardado, pero las alarmas no sonarán hasta que des estos permisos."
+            !fueraDelAhorroDeBateria -> "Tus alarmas quedaron programadas, pero el teléfono podría retrasarlas para ahorrar batería."
+            else -> "Tus alarmas quedaron programadas y el teléfono no las retrasará para ahorrar batería."
+        }
+
     /** Consejo propio del fabricante, que suele cerrar aplicaciones aunque estén fuera del ahorro. */
     val consejoDelFabricante: String?
         get() = when (fabricante.lowercase()) {
@@ -35,6 +50,8 @@ data class Diagnostico(
                 "En Samsung, revisa Ajustes › Batería › Límites de uso en segundo plano: MiDosis no debe estar en «Aplicaciones en suspensión profunda»."
             "xiaomi", "redmi", "poco" ->
                 "En Xiaomi, abre la información de MiDosis › Ahorro de batería y elige «Sin restricciones»."
+            "motorola" ->
+                "En Motorola, si una alarma se atrasa, abre Ajustes › Aplicaciones › MiDosis › Uso de batería de la app y elige «Sin restricciones»."
             "huawei", "honor" ->
                 "En Huawei, abre Ajustes › Batería › Inicio de aplicaciones y deja que MiDosis se gestione manualmente."
             else -> null

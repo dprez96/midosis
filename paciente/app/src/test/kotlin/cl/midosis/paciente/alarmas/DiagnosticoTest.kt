@@ -29,6 +29,14 @@ class DiagnosticoTest {
     fun `da el consejo del fabricante que cierra aplicaciones`() {
         assertEquals(true, d(fabricante = "samsung").consejoDelFabricante?.contains("suspensión profunda"))
         assertEquals(true, d(fabricante = "Xiaomi").consejoDelFabricante?.contains("Sin restricciones"))
+        assertEquals(true, d(fabricante = "motorola").consejoDelFabricante?.contains("Sin restricciones"))
         assertNull(d(fabricante = "Google").consejoDelFabricante)
+    }
+
+    @Test
+    fun `el título dice lo que falta o que no falta nada`() {
+        assertEquals("Falta un permiso para tus alarmas", d(exactas = false, bateria = false).titulo)
+        assertEquals("Revisa el ahorro de batería", d(bateria = false).titulo)
+        assertEquals("Tus alarmas están listas", d().titulo)
     }
 }
