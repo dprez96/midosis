@@ -4,7 +4,8 @@
   pide. Las alarmas, la verificación del código y el tratamiento siguen funcionando sin
   conexión (HU-15, HU-09): nada de eso pasa por la red. La configuración de red exige HTTPS.
 -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Android 13+: mostrar la notificación de la toma. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -13,6 +14,15 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <!-- Reprogramar las alarmas al encender el teléfono: Android las borra al apagarse. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!--
+      Pedir con un solo toque que MiDosis quede fuera del ahorro de batería (HU-24). Sin él, el
+      paciente debe buscar la aplicación en la lista de todas las del teléfono: en un Motorola
+      fueron 24 desplazamientos. Google Play lo admite para recordatorios de medicamentos, cuya
+      función principal depende de alarmas puntuales; se justifica al publicar.
+    -->
+    <uses-permission
+        android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"
+        tools:ignore="BatteryLife" />
     <!-- Leer el código del comprobante (HU-11). La imagen se analiza en el teléfono y no se guarda. -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.INTERNET" />
