@@ -18,7 +18,7 @@
     "@firebase/app": "^0.16.3",
     "@firebase/auth": "^1.13.7",
     "qrcode-generator": "^2.0.4",
-    "react": "^19.3.0",
+    "react": "^19.3.1",
     "react-dom": "^19.3.0"
   },
   "devDependencies": {
