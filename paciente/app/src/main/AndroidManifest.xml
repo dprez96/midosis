@@ -51,6 +51,11 @@
 
         <!-- No exportado: estos avisos los envía solo el sistema, que puede entregarlos
              igual. Ninguna otra aplicación puede dispararlo. -->
+        <!-- El aviso de próximo retiro (HU-20). -->
+        <receiver
+            android:name=".alarmas.ReceptorDeRetiro"
+            android:exported="false" />
+
         <receiver
             android:name=".alarmas.ReceptorDeArranque"
             android:exported="false">
