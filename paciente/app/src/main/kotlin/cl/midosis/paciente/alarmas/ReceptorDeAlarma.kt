@@ -32,20 +32,27 @@ class ReceptorDeAlarma : BroadcastReceiver() {
         val intento = intencion.getIntExtra(EXTRA_INTENTO, 0)
         val programador = ProgramadorDeAlarmas(contexto)
 
+        // Las alarmas del banco de dispositivos solo miden el desfase: no piden respuesta, no
+        // encienden la pantalla ni se repiten. Si no, el teléfono del banco se encendería tres
+        // veces cada media hora durante un mes.
+        val deBanco = lineas.isNotEmpty() && lineas.all { it.startsWith(PREFIJO_DE_BANCO) }
+
         if (intento == 0) {
             RegistroDeDisparos(contexto).anotar(id, programada, disparada)
-            notificar(contexto, id, programada, lineas)
-            Reiteraciones.momentos(Instant.ofEpochMilli(programada)).forEachIndexed { i, momento ->
-                programador.programarRecordatorio(id, lineas, programada, momento.toEpochMilli(), i + 1)
+            notificar(contexto, id, programada, lineas, conRespuesta = !deBanco)
+            if (!deBanco) {
+                Reiteraciones.momentos(Instant.ofEpochMilli(programada)).forEachIndexed { i, momento ->
+                    programador.programarRecordatorio(id, lineas, programada, momento.toEpochMilli(), i + 1)
+                }
             }
             // Cada alarma que suena hace avanzar la ventana de las que se entregan al sistema.
             programador.reprogramarGuardadas()
         } else if (!HistorialDeTomas(contexto).cerrado(id, Instant.ofEpochSecond(programada / 1000))) {
-            notificar(contexto, id, programada, lineas)
+            notificar(contexto, id, programada, lineas, conRespuesta = true)
         }
     }
 
-    private fun notificar(contexto: Context, id: Int, programada: Long, lineas: List<String>) {
+    private fun notificar(contexto: Context, id: Int, programada: Long, lineas: List<String>, conRespuesta: Boolean) {
         val permitido = ContextCompat.checkSelfPermission(contexto, Manifest.permission.POST_NOTIFICATIONS) ==
             PackageManager.PERMISSION_GRANTED
         if (!permitido) return
@@ -56,7 +63,7 @@ class ReceptorDeAlarma : BroadcastReceiver() {
         val estilo = NotificationCompat.InboxStyle().setBigContentTitle(titulo)
         lineas.forEach { estilo.addLine(it) }
 
-        val notificacion = NotificationCompat.Builder(contexto, CanalDeTomas.ID)
+        val constructor = NotificationCompat.Builder(contexto, CanalDeTomas.ID)
             .setSmallIcon(android.R.drawable.ic_popup_reminder)
             .setContentTitle(titulo)
             .setContentText(lineas.joinToString(", "))
@@ -67,15 +74,18 @@ class ReceptorDeAlarma : BroadcastReceiver() {
             .setVibrate(CanalDeTomas.VIBRACION)
             .setDefaults(Notification.DEFAULT_LIGHTS)
             .setAutoCancel(true)
-            .addAction(0, contexto.getString(R.string.respuesta_tomada), respuesta(contexto, id, programada, lineas, Respuesta.TOMADA))
-            .addAction(0, contexto.getString(R.string.respuesta_pospuesta), respuesta(contexto, id, programada, lineas, Respuesta.POSPUESTA))
-            .addAction(0, contexto.getString(R.string.respuesta_omitida), respuesta(contexto, id, programada, lineas, Respuesta.OMITIDA))
-            // Con el teléfono bloqueado, la toma se muestra a pantalla completa, como un
-            // despertador; desbloqueado, aparece arriba con los botones. Tocarla también abre
-            // la pantalla de la toma.
-            .setFullScreenIntent(pantallaDeToma(contexto, id, programada, lineas), true)
-            .setContentIntent(pantallaDeToma(contexto, id, programada, lineas))
-            .build()
+        if (conRespuesta) {
+            constructor
+                .addAction(0, contexto.getString(R.string.respuesta_tomada), respuesta(contexto, id, programada, lineas, Respuesta.TOMADA))
+                .addAction(0, contexto.getString(R.string.respuesta_pospuesta), respuesta(contexto, id, programada, lineas, Respuesta.POSPUESTA))
+                .addAction(0, contexto.getString(R.string.respuesta_omitida), respuesta(contexto, id, programada, lineas, Respuesta.OMITIDA))
+                // Con el teléfono bloqueado, la toma se muestra a pantalla completa, como un
+                // despertador; desbloqueado, aparece arriba con los botones. Tocarla también
+                // abre la pantalla de la toma.
+                .setFullScreenIntent(pantallaDeToma(contexto, id, programada, lineas), true)
+                .setContentIntent(pantallaDeToma(contexto, id, programada, lineas))
+        }
+        val notificacion = constructor.build()
 
         try {
             NotificationManagerCompat.from(contexto).notify(id, notificacion)
@@ -112,6 +122,9 @@ class ReceptorDeAlarma : BroadcastReceiver() {
         /** 0 es el aviso programado; 1 y 2, las reiteraciones; [POSPUESTO], el que pidió el paciente. */
         const val EXTRA_INTENTO = "cl.midosis.paciente.INTENTO"
         const val POSPUESTO = 3
+
+        /** El nombre de las alarmas de la serie de banco ([SerieDePrueba]). */
+        private const val PREFIJO_DE_BANCO = "Alarma de banco"
         const val EXTRA_ID = "cl.midosis.paciente.ID"
         const val EXTRA_PROGRAMADA = "cl.midosis.paciente.PROGRAMADA"
         const val EXTRA_LINEAS = "cl.midosis.paciente.LINEAS"
