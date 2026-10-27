@@ -11,7 +11,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import cl.midosis.paciente.R
-import cl.midosis.paciente.ui.PantallaPrincipal
+import cl.midosis.paciente.ui.PantallaDeToma
 import java.time.Instant
 
 /**
@@ -70,14 +70,11 @@ class ReceptorDeAlarma : BroadcastReceiver() {
             .addAction(0, contexto.getString(R.string.respuesta_tomada), respuesta(contexto, id, programada, lineas, Respuesta.TOMADA))
             .addAction(0, contexto.getString(R.string.respuesta_pospuesta), respuesta(contexto, id, programada, lineas, Respuesta.POSPUESTA))
             .addAction(0, contexto.getString(R.string.respuesta_omitida), respuesta(contexto, id, programada, lineas, Respuesta.OMITIDA))
-            .setContentIntent(
-                PendingIntent.getActivity(
-                    contexto,
-                    id,
-                    Intent(contexto, PantallaPrincipal::class.java),
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-                ),
-            )
+            // Con el teléfono bloqueado, la toma se muestra a pantalla completa, como un
+            // despertador; desbloqueado, aparece arriba con los botones. Tocarla también abre
+            // la pantalla de la toma.
+            .setFullScreenIntent(pantallaDeToma(contexto, id, programada, lineas), true)
+            .setContentIntent(pantallaDeToma(contexto, id, programada, lineas))
             .build()
 
         try {
@@ -86,6 +83,18 @@ class ReceptorDeAlarma : BroadcastReceiver() {
             // El paciente retiró el permiso de notificaciones justo ahora.
         }
     }
+
+    private fun pantallaDeToma(contexto: Context, id: Int, programada: Long, lineas: List<String>): PendingIntent =
+        PendingIntent.getActivity(
+            contexto,
+            id,
+            Intent(contexto, PantallaDeToma::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                .putExtra(EXTRA_ID, id)
+                .putExtra(EXTRA_PROGRAMADA, programada)
+                .putExtra(EXTRA_LINEAS, lineas.toTypedArray()),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
 
     private fun respuesta(contexto: Context, id: Int, programada: Long, lineas: List<String>, r: Respuesta): PendingIntent =
         PendingIntent.getBroadcast(

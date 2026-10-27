@@ -12,6 +12,8 @@
     <!-- Android 12+: alarmas exactas. Desde Android 14 lo concede el paciente en Ajustes. -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Mostrar la toma a pantalla completa con el teléfono bloqueado, como un despertador (HU-16). -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <!-- Reprogramar las alarmas al encender el teléfono: Android las borra al apagarse. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!--
@@ -44,6 +46,19 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!--
+          La toma a pantalla completa: se enciende la pantalla y se muestra sobre el bloqueo.
+          Sale de los recientes al contestar, para no quedar como una ventana más.
+        -->
+        <activity
+            android:name=".ui.PantallaDeToma"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:showWhenLocked="true"
+            android:taskAffinity=""
+            android:turnScreenOn="true" />
 
         <receiver
             android:name=".alarmas.ReceptorDeAlarma"
