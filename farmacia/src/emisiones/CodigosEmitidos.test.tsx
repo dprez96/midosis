@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { ErrorDeApi, type ApiDeRevocacion, type EmisionReciente } from '../api/cliente'
 import { CodigosEmitidos } from './CodigosEmitidos'
+import { registroLocal } from '../dominio/intentos'
 
 const vigente: EmisionReciente = {
   id: '01M0877000WQNC8FHDYAA6Y83C',
@@ -107,6 +108,26 @@ describe('CodigosEmitidos', () => {
     render(<CodigosEmitidos api={apiFalsa([])} />)
 
     expect(await screen.findByText('No hay códigos vigentes en las últimas 72 horas.')).toBeInTheDocument()
+  })
+
+  it('muestra las emisiones que fallaron y permite descartarlas', async () => {
+    const usuario = userEvent.setup()
+    const intentos = registroLocal(() => null)
+    intentos.anotar({ en: '2026-10-27T18:00:00Z', productos: ['Losartán 50 mg'], motivo: 'No hay conexión con el servidor de MiDosis.' })
+    render(<CodigosEmitidos api={apiFalsa([])} intentos={intentos} />)
+
+    const seccion = screen.getByRole('region', { name: 'Emisiones que fallaron' })
+    expect(within(seccion).getByText('Losartán 50 mg')).toBeInTheDocument()
+    expect(within(seccion).getByText(/No hay conexión/)).toBeInTheDocument()
+
+    await usuario.click(within(seccion).getByRole('button', { name: 'Descartar' }))
+    expect(screen.queryByRole('region', { name: 'Emisiones que fallaron' })).not.toBeInTheDocument()
+    expect(intentos.listar()).toEqual([])
+  })
+
+  it('sin emisiones fallidas no muestra esa sección', () => {
+    render(<CodigosEmitidos api={apiFalsa([])} intentos={registroLocal(() => null)} />)
+    expect(screen.queryByRole('region', { name: 'Emisiones que fallaron' })).not.toBeInTheDocument()
   })
 
   it('si core no responde muestra el error', async () => {

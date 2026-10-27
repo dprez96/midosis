@@ -6,6 +6,7 @@ import { CONSENTIMIENTO, peticionDeEmision, viaSugerida, type CodigoEmitido } fr
 import type { Plantilla } from '../dominio/posologia'
 import { catalogoFalso, clonazepam, losartan } from '../test/datos'
 import { PantallaMeson } from './PantallaMeson'
+import { intentosDelNavegador } from '../dominio/intentos'
 
 type Usuario = ReturnType<typeof userEvent.setup>
 
@@ -109,6 +110,23 @@ describe('Emisión del código (HU-01) con consentimiento (HU-05)', () => {
     expect(screen.getByRole('button', { name: 'Intentar de nuevo' })).toBeInTheDocument()
     await usuario.click(screen.getByRole('button', { name: 'Cerrar la atención sin código' }))
     expect(screen.getByText('Aún no hay productos. Escanee el primer envase.')).toBeInTheDocument()
+  })
+
+  it('si MiDosis no responde, el intento queda registrado con sus productos y el motivo', async () => {
+    localStorage.clear()
+    const usuario = userEvent.setup()
+    preparar(vi.fn<ApiDeEmision['emitir']>(async () => {
+      throw new ErrorDeApi(0, 'No hay conexión con el servidor de MiDosis.')
+    }))
+    await registrarLinea(usuario, losartan.gtin, 'Losartán 50 mg')
+    await usuario.click(screen.getByRole('button', { name: 'Emitir código' }))
+    await usuario.click(screen.getByRole('button', { name: 'El paciente acepta' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('El intento quedó anotado en «Códigos emitidos».')
+    expect(intentosDelNavegador.listar()).toMatchObject([
+      { productos: ['Losartán 50 mg'], motivo: 'No hay conexión con el servidor de MiDosis.' },
+    ])
+    localStorage.clear()
   })
 })
 
