@@ -87,7 +87,7 @@ fun IngresoDeCodigoCorto(alObtener: (String) -> Unit, alCancelar: () -> Unit) {
                                 is ClienteDeCanje.Respuesta.Codigo -> alObtener(respuesta.texto)
                                 is ClienteDeCanje.Respuesta.Rechazo -> mensaje = respuesta.mensaje
                                 ClienteDeCanje.Respuesta.SinConexion ->
-                                    mensaje = "No hay conexión. Conéctate a internet y vuelve a intentar."
+                                    mensaje = "No se pudo conectar con MiDosis. Revisa tu conexión a internet y vuelve a intentar en un momento."
                                 ClienteDeCanje.Respuesta.NoDisponible -> mensaje = "La carga con código y PIN no está disponible."
                             }
                         }
