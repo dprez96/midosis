@@ -49,6 +49,11 @@
             android:name=".alarmas.ReceptorDeAlarma"
             android:exported="false" />
 
+        <!-- Los botones «Tomé», «Posponer» y «Omitir» de la notificación (HU-16). -->
+        <receiver
+            android:name=".alarmas.ReceptorDeRespuesta"
+            android:exported="false" />
+
         <!-- No exportado: estos avisos los envía solo el sistema, que puede entregarlos
              igual. Ninguna otra aplicación puede dispararlo. -->
         <receiver
