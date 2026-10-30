@@ -410,7 +410,7 @@ button.enlace {
  * Todo lo que no es el comprobante ni lo contiene se oculta con display: con visibility conservaba
  * su espacio y la pantalla del mesón salía como hojas en blanco a continuación del comprobante.
  *
- * El QR ocupa 70 mm, casi todo el ancho imprimible: mientras más grande, mejor lo lee la cámara
+ * El QR ocupa 72 mm, todo el ancho imprimible: mientras más grande, mejor lo lee la cámara
  * de un teléfono antiguo. El texto queda en 64 mm: el área imprimible de las térmicas de 80 mm va
  * de 64 a 72 mm según el modelo, y en la Xprinter del mesón el texto a 72 mm salía cortado a la
  * derecha. Todo en negro (el gris sale tramado). La zona tranquila de 4 módulos viene en el dibujo.
@@ -446,7 +446,7 @@ html.imprimiendo .comprobante {
   box-sizing: border-box;
   display: grid;
   gap: 3mm;
-  width: 70mm;
+  width: 72mm;
   margin: 0;
   padding: 2mm 0 4mm;
   border: none;
@@ -475,8 +475,8 @@ html.imprimiendo .comprobante .qr-y-respaldo {
 
 html.imprimiendo .codigo-qr {
   display: block;
-  width: 70mm;
-  height: 70mm;
+  width: 72mm;
+  height: 72mm;
 }
 
 /* El texto, más angosto que el QR, para que no lo corte el borde derecho. */
