@@ -5,6 +5,10 @@
     <string name="canal_tomas_descripcion">Avisa a la hora de tomar cada medicamento. Suena aunque el teléfono esté sin conexión.</string>
     <string name="notificacion_titulo">Hora de tu medicamento</string>
     <string name="notificacion_titulo_varios">Hora de tus medicamentos</string>
+    <string name="canal_retiros">Retiros en la farmacia</string>
+    <string name="canal_retiros_descripcion">Avisa unos días antes de que se acabe lo que retiraste, para volver a la farmacia a tiempo.</string>
+    <string name="retiro_titulo">Vuelve pronto a la farmacia</string>
+    <string name="retiro_cuerpo">Tu tratamiento sigue: retira lo que viene para no interrumpirlo.</string>
 
     <!-- Rechazos al leer un código (HU-09). Cada uno pide algo distinto al paciente. -->
     <string name="rechazo_no_es_de_midosis">Este no es un código de MiDosis</string>

@@ -37,6 +37,7 @@ import cl.midosis.paciente.rutina.RutinaGuardada
 import cl.midosis.paciente.tratamiento.AlmacenDeTratamientos
 import cl.midosis.paciente.tratamiento.TratamientoGuardado
 import cl.midosis.paciente.tratamiento.Resumen
+import cl.midosis.paciente.alarmas.AvisosDeRetiroEnElTelefono
 import cl.midosis.paciente.alarmas.Diagnostico
 import cl.midosis.paciente.alarmas.PlanDeAlarmas
 import cl.midosis.paciente.alarmas.ProgramadorDeAlarmas
@@ -108,6 +109,7 @@ fun AppPaciente() {
         val ahora = LocalDateTime.now()
         val tomas = Planificacion.tomasDe(t, revision.planes)
         val programadas = programador.programar(PlanDeAlarmas.construir(tomas, ahora), ahora)
+        AvisosDeRetiroEnElTelefono.programar(contexto, ahora)
         // También si quedaron programadas pero el ahorro de batería puede retrasarlas (HU-24).
         pantalla = if (programadas == 0 || !Diagnostico.del(contexto).todoEnOrden) Pantalla.Permisos else Pantalla.Inicio
     }
