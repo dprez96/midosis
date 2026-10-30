@@ -84,7 +84,10 @@ class EmisionDeCodigos(
 
         val codigo = EmisorDeCodigos(firmante, proveedor.contenido(), aleatorio).emitir(carga)
         contexto.en(comuna) {
-            emisiones.registrar(carga, autor, firmante.kid, solicitud.consentimiento)
+            emisiones.registrar(
+                carga, autor, firmante.kid, solicitud.consentimiento,
+                solicitud.lineas.groupBy { it.gtin.valor }.mapValues { (_, ls) -> ls.sumOf { it.unidadesEntregadas } },
+            )
         }
         val registrado = canje.registrar(comuna, codigo, Instant.ofEpochSecond(expira), carga.id)
         return CodigoEmitido(carga.id, codigo, registrado.codigoCorto.agrupado, registrado.pin.valor, Instant.ofEpochSecond(expira))
