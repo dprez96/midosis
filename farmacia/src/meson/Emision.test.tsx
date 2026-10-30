@@ -70,6 +70,12 @@ describe('Emisión del código (HU-01) con consentimiento (HU-05)', () => {
     expect(within(comprobante).getByText('Losartán 50 mg')).toBeInTheDocument()
     expect(within(comprobante).getByText(/alcanza hasta el 14-12-2026/)).toBeInTheDocument()
     expect(within(comprobante).getByText('Para: ______________________________')).toBeInTheDocument()
+
+    // Al imprimir (botón o Ctrl+P) la pantalla queda solo con el comprobante, y vuelve después.
+    window.dispatchEvent(new Event('beforeprint'))
+    expect(document.documentElement).toHaveClass('imprimiendo')
+    window.dispatchEvent(new Event('afterprint'))
+    expect(document.documentElement).not.toHaveClass('imprimiendo')
   })
 
   it('un producto con control legal sale en el comprobante sin su nombre', async () => {
