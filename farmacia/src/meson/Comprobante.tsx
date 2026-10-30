@@ -1,8 +1,10 @@
+import { useEffect, useRef } from 'react'
 import { nombreEnComprobante } from '../dominio/comprobante'
 import type { CodigoEmitido, LineaParaEmitir } from '../dominio/emision'
 import { describirPosologia, UNIDADES } from '../dominio/posologia'
 import { calcularCobertura, fechaLegible } from '../dominio/tramo'
 import { CodigoQr } from './CodigoQr'
+import { prepararImpresion, terminarImpresion } from './impresion'
 
 interface Props {
   emitido: CodigoEmitido
@@ -27,8 +29,25 @@ const VENCE = new Intl.DateTimeFormat('es-CL', {
  * del paciente se escribe a mano en «Para:» y nunca se digita (RN-01).
  */
 export function Comprobante({ emitido, lineas, retiro, alTerminar }: Props) {
+  const seccion = useRef<HTMLElement>(null)
+
+  // Vale también para Ctrl+P: el navegador avisa antes y después de imprimir.
+  useEffect(() => {
+    const antes = () => {
+      if (seccion.current) prepararImpresion(seccion.current)
+    }
+    const despues = () => terminarImpresion()
+    window.addEventListener('beforeprint', antes)
+    window.addEventListener('afterprint', despues)
+    return () => {
+      window.removeEventListener('beforeprint', antes)
+      window.removeEventListener('afterprint', despues)
+      terminarImpresion()
+    }
+  }, [])
+
   return (
-    <section className="tarjeta comprobante" aria-labelledby="titulo-comprobante">
+    <section ref={seccion} className="tarjeta comprobante" aria-labelledby="titulo-comprobante">
       <h2 id="titulo-comprobante">Comprobante de tratamiento · MiDosis</h2>
       <p className="para">Para: ______________________________</p>
       <div className="qr-y-respaldo">
