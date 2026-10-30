@@ -7,10 +7,13 @@
  * el controlador de la impresora no alimente papel de más.
  */
 
-/** Ancho del rollo de papel. */
-export const ANCHO_ROLLO_MM = 80
+/**
+ * Ancho de la hoja. Es el del papel «82(80) mm» del controlador de la Xprinter del mesón: con la
+ * hoja de 80 mm el navegador no encontraba ese papel y usaba el rollo completo (unos 3 m).
+ */
+export const ANCHO_ROLLO_MM = 82
 /** Papel que se deja bajo el comprobante para cortarlo sin tocar el texto. */
-export const MARGEN_INFERIOR_MM = 8
+export const MARGEN_INFERIOR_MM = 10
 /** Por debajo de este largo la medición no es confiable y se deja la hoja del controlador. */
 const ALTO_MINIMO_MM = 40
 const PX_POR_MM = 96 / 25.4
