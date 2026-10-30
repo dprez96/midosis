@@ -24,8 +24,10 @@ object SerieDePrueba {
     }
 
     /**
-     * Una alarma cada cierto intervalo durante unas horas, para el banco de dispositivos.
-     * Se queda muy por debajo del límite de 500 alarmas por aplicación de Android.
+     * Una alarma cada cierto intervalo, para el banco de dispositivos (#43). La de 30 días
+     * tiene 1440 alarmas, más que las 500 que Android admite por aplicación: se guardan todas
+     * en el plan y el programador entrega solo las de los próximos 7 días, que avanzan cada vez
+     * que suena una (HU-08). Así la serie corre sola el mes entero, sin reiniciarla a mano.
      */
     fun serie(ahora: LocalDateTime, cada: Duration, durante: Duration): List<TomaProgramada> {
         require(!cada.isNegative && !cada.isZero) { "el intervalo debe ser positivo" }
@@ -37,5 +39,6 @@ object SerieDePrueba {
         }
     }
 
-    const val MAXIMO_SERIE = 200
+    /** Treinta días, cada 30 minutos. */
+    const val MAXIMO_SERIE = 30 * 48
 }

@@ -80,7 +80,20 @@ class PlanDeAlarmasTest {
     @Test
     fun `la serie de banco no supera el maximo permitido`() {
         assertFailsWith<IllegalArgumentException> {
-            SerieDePrueba.serie(ahora, Duration.ofMinutes(1), Duration.ofDays(1))
+            SerieDePrueba.serie(ahora, Duration.ofMinutes(1), Duration.ofDays(2))
         }
+    }
+
+    @Test
+    fun `la serie de 30 dias entrega al sistema solo la ventana de 7 dias`() {
+        val plan = PlanDeAlarmas.construir(
+            SerieDePrueba.serie(ahora, Duration.ofMinutes(30), Duration.ofDays(30)),
+            ahora,
+        )
+        assertEquals(30 * 48, plan.size)
+        // Bajo el límite de 500 alarmas por aplicación; el resto entra a medida que suenan.
+        val ventana = ProgramadorDeAlarmas.dentroDeLaVentana(plan, ahora)
+        assertEquals(7 * 48, ventana.size)
+        assertTrue(ventana.size < 500)
     }
 }
