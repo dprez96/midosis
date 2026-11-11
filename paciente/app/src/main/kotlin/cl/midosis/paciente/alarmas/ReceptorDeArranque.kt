@@ -18,6 +18,7 @@ class ReceptorDeArranque : BroadcastReceiver() {
     override fun onReceive(contexto: Context, intencion: Intent) {
         if (intencion.action !in ACCIONES) return
         val reprogramadas = ProgramadorDeAlarmas(contexto).reprogramarGuardadas()
+        AvisosDeRetiroEnElTelefono.programar(contexto)
         Log.i("MiDosis", "alarmas reprogramadas tras ${intencion.action}: $reprogramadas")
     }
 
