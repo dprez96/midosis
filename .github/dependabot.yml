@@ -1,5 +1,10 @@
 version: 2
 
+# Hasta la entrega final (11-12-2026) solo se abren pull requests de seguridad: el límite 0
+# detiene las actualizaciones de versión, pero no las alertas ni las actualizaciones de
+# seguridad de Dependabot. Después de la entrega se restauran los límites anteriores
+# (5 en gradle, npm de farmacia y github-actions; 2 en pip y npm de infra/firebase).
+#
 # Cada ecosistema se activa cuando su modulo tiene manifiesto: Dependabot falla
 # si apunta a una carpeta sin build.gradle.kts o sin package.json.
 updates:
@@ -7,37 +12,37 @@ updates:
     directory: /core
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
 
   - package-ecosystem: gradle
     directory: /motor
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
 
   - package-ecosystem: gradle
     directory: /contrato/kotlin
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
 
   - package-ecosystem: pip
     directory: /contrato/herramientas
     schedule:
       interval: monthly
-    open-pull-requests-limit: 2
+    open-pull-requests-limit: 0
 
   - package-ecosystem: gradle
     directory: /paciente
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
 
   - package-ecosystem: npm
     directory: /farmacia
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
     groups:
       # Las dos piezas de Firebase tienen que quedar en la misma entrega.
       firebase:
@@ -62,10 +67,10 @@ updates:
     directory: /infra/firebase
     schedule:
       interval: monthly
-    open-pull-requests-limit: 2
+    open-pull-requests-limit: 0
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: monthly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
