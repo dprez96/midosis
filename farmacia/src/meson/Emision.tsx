@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { ApiDeEmision } from '../api/cliente'
 import { CONSENTIMIENTO, type CodigoEmitido, type LineaParaEmitir } from '../dominio/emision'
+import { intentosDelNavegador, type RegistroDeIntentos } from '../dominio/intentos'
 import { Comprobante } from './Comprobante'
 
 interface Props {
@@ -10,6 +11,8 @@ interface Props {
   retiro: string
   /** Hora de la aceptación del consentimiento; las pruebas la fijan. */
   ahora?: () => Date
+  /** Dónde queda cada emisión fallida; por omisión, este navegador. */
+  intentos?: RegistroDeIntentos
   alTerminar: () => void
 }
 
@@ -26,16 +29,32 @@ type Paso =
  * comprobante (HU-01). Ninguna rama impide entregar el medicamento: si el paciente no acepta o
  * MiDosis no responde, la atención se cierra igual, sin código (RN-11).
  */
-export function Emision({ api, lineas, retiro, ahora = () => new Date(), alTerminar }: Props) {
+export function Emision({
+  api,
+  lineas,
+  retiro,
+  ahora = () => new Date(),
+  intentos = intentosDelNavegador,
+  alTerminar,
+}: Props) {
   const [paso, setPaso] = useState<Paso>({ tipo: 'listo' })
 
   async function emitir(aEmitir: LineaParaEmitir[]) {
     setPaso({ tipo: 'emitiendo' })
     try {
-      const emitido = await api.emitir(aEmitir, { version: CONSENTIMIENTO.version, aceptadoEn: ahora().toISOString() })
+      const emitido = await api.emitir(aEmitir, {
+        version: CONSENTIMIENTO.version,
+        aceptadoEn: ahora().toISOString(),
+      })
       setPaso({ tipo: 'emitido', emitido })
     } catch (error) {
-      setPaso({ tipo: 'fallo', mensaje: error instanceof Error ? error.message : 'No se pudo emitir el código.' })
+      const mensaje = error instanceof Error ? error.message : 'No se pudo emitir el código.'
+      intentos.anotar({
+        en: ahora().toISOString(),
+        productos: aEmitir.map((l) => l.producto.nombre),
+        motivo: mensaje,
+      })
+      setPaso({ tipo: 'fallo', mensaje })
     }
   }
 
@@ -52,7 +71,12 @@ export function Emision({ api, lineas, retiro, ahora = () => new Date(), alTermi
           {lineas === null && (
             <p className="secundario">Registre la posología y la entrega de cada producto para emitir el código.</p>
           )}
-          <button type="button" className="primario" disabled={lineas === null} onClick={() => setPaso({ tipo: 'consentimiento' })}>
+          <button
+            type="button"
+            className="primario"
+            disabled={lineas === null}
+            onClick={() => setPaso({ tipo: 'consentimiento' })}
+          >
             Emitir código
           </button>
         </>
@@ -92,7 +116,8 @@ export function Emision({ api, lineas, retiro, ahora = () => new Date(), alTermi
       {paso.tipo === 'fallo' && (
         <>
           <p className="aviso aviso-error" role="alert">
-            {paso.mensaje} Entregue los medicamentos con normalidad; el código se puede emitir después.
+            {paso.mensaje} Entregue los medicamentos con normalidad; el código se puede emitir después. El intento quedó
+            anotado en «Códigos emitidos».
           </p>
           <div className="fila">
             {lineas && (

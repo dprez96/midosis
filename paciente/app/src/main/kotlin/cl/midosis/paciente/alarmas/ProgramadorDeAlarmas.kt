@@ -55,8 +55,31 @@ class ProgramadorDeAlarmas(
     fun cancelarTodas() {
         for (solicitud in almacen.leer()) {
             alarmas.cancel(intencionDeAlarma(solicitud.id, emptyList(), 0))
+            cancelarRecordatorios(solicitud.id)
         }
         almacen.vaciar()
+    }
+
+    /**
+     * Programa un recordatorio del aviso [id]: una reiteración si el paciente no contesta, o el
+     * aviso pospuesto (HU-16). No entra al plan guardado: si el teléfono se reinicia en esos
+     * minutos, el recordatorio se pierde, pero el aviso original ya sonó.
+     */
+    fun programarRecordatorio(id: Int, lineas: List<String>, programadaMs: Long, cuandoMs: Long, intento: Int) {
+        if (!puedeProgramarExactas()) return
+        val info = AlarmManager.AlarmClockInfo(cuandoMs, intencionDePantalla())
+        try {
+            alarmas.setAlarmClock(info, intencionDeRecordatorio(id, lineas, programadaMs, intento))
+        } catch (e: SecurityException) {
+            // El paciente revocó el permiso: el aviso original ya sonó.
+        }
+    }
+
+    /** Cancela las reiteraciones y el aviso pospuesto de [id]: el paciente ya contestó. */
+    fun cancelarRecordatorios(id: Int) {
+        for (intento in 1..ReceptorDeAlarma.POSPUESTO) {
+            alarmas.cancel(intencionDeRecordatorio(id, emptyList(), 0, intento))
+        }
     }
 
     fun cantidadVigentes(ahora: LocalDateTime = LocalDateTime.now()): Int =
@@ -69,6 +92,8 @@ class ProgramadorDeAlarmas(
          * guardado y entra a medida que la ventana avanza.
          */
         val VENTANA: java.time.Duration = java.time.Duration.ofDays(7)
+
+        private const val ACCION_RECORDATORIO = "cl.midosis.paciente.RECORDATORIO_"
 
         fun dentroDeLaVentana(plan: List<SolicitudDeAlarma>, ahora: LocalDateTime): List<SolicitudDeAlarma> =
             plan.filter { it.momento.isAfter(ahora) && !it.momento.isAfter(ahora.plus(VENTANA)) }
@@ -109,6 +134,20 @@ class ProgramadorDeAlarmas(
                 .putExtra(ReceptorDeAlarma.EXTRA_ID, id)
                 .putExtra(ReceptorDeAlarma.EXTRA_PROGRAMADA, cuando)
                 .putExtra(ReceptorDeAlarma.EXTRA_LINEAS, lineas.toTypedArray()),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+
+    /** Cada intento tiene su propia acción: Android los distingue y se cancelan por separado. */
+    private fun intencionDeRecordatorio(id: Int, lineas: List<String>, programadaMs: Long, intento: Int): PendingIntent =
+        PendingIntent.getBroadcast(
+            contexto,
+            id,
+            Intent(contexto, ReceptorDeAlarma::class.java)
+                .setAction("$ACCION_RECORDATORIO$intento")
+                .putExtra(ReceptorDeAlarma.EXTRA_ID, id)
+                .putExtra(ReceptorDeAlarma.EXTRA_PROGRAMADA, programadaMs)
+                .putExtra(ReceptorDeAlarma.EXTRA_LINEAS, lineas.toTypedArray())
+                .putExtra(ReceptorDeAlarma.EXTRA_INTENTO, intento),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
