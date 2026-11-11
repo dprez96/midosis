@@ -26,3 +26,12 @@ INSERT INTO producto (comuna, gtin, nombre, principio_activo, forma, concentraci
     ('13123', '7802250013303', 'Clonazepam 0,5 mg', 'Clonazepam', 'Comprimido', '0,5 mg', 'DS405'),
     ('13123', '7802250013402', 'Morfina 10 mg', 'Morfina sulfato', 'Comprimido', '10 mg', 'DS404')
 ON CONFLICT (comuna, gtin) DO NOTHING;
+
+-- Productos de demostración con el GTIN real impreso en su envase, para probar el lector de
+-- códigos de barras con cajas físicas. El GTIN es información pública del producto: no son
+-- datos de una farmacia ni de pacientes.
+INSERT INTO producto (comuna, gtin, nombre, principio_activo, forma, concentracion) VALUES
+    ('13123', '7800007118783', 'Loperamida 2 mg', 'Loperamida clorhidrato', 'Comprimido', '2 mg'),
+    ('13123', '7800007803801', 'Prednisona 20 mg', 'Prednisona', 'Comprimido', '20 mg'),
+    ('13123', '7800007120250', 'Furosemida 40 mg', 'Furosemida', 'Comprimido', '40 mg')
+ON CONFLICT (comuna, gtin) DO NOTHING;

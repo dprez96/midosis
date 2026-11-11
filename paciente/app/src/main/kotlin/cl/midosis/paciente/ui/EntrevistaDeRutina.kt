@@ -2,6 +2,7 @@ package cl.midosis.paciente.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -127,23 +128,28 @@ private fun Titulo(texto: String) {
     Text(texto, style = MaterialTheme.typography.headlineSmall)
 }
 
-/** Botones grandes de más y menos en vez de un reloj: más fáciles de tocar para un adulto mayor. */
+/**
+ * Botones grandes de más y menos en vez de un reloj: más fáciles de tocar para un adulto mayor.
+ * La hora va arriba y los botones abajo, repartidos en el ancho: con letra grande o en una
+ * pantalla angosta, cuatro botones al lado de la hora no caben y los números quedaban en
+ * vertical.
+ */
 @Composable
 private fun SelectorDeHora(etiqueta: String, valor: LocalTime, alMover: (Long) -> Unit) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(etiqueta, style = MaterialTheme.typography.titleMedium)
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                BotonDeAjuste("−1 h", "$etiqueta: una hora antes") { alMover(-60) }
-                BotonDeAjuste("−15", "$etiqueta: 15 minutos antes") { alMover(-15) }
-                Text(
-                    hora(valor),
-                    style = MaterialTheme.typography.headlineMedium,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.weight(1f).semantics { liveRegion = LiveRegionMode.Polite },
-                )
-                BotonDeAjuste("+15", "$etiqueta: 15 minutos después") { alMover(15) }
-                BotonDeAjuste("+1 h", "$etiqueta: una hora después") { alMover(60) }
+            Text(
+                hora(valor),
+                style = MaterialTheme.typography.headlineMedium,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite },
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                BotonDeAjuste("−1 h", "$etiqueta: una hora antes", Modifier.weight(1f)) { alMover(-60) }
+                BotonDeAjuste("−15", "$etiqueta: 15 minutos antes", Modifier.weight(1f)) { alMover(-15) }
+                BotonDeAjuste("+15", "$etiqueta: 15 minutos después", Modifier.weight(1f)) { alMover(15) }
+                BotonDeAjuste("+1 h", "$etiqueta: una hora después", Modifier.weight(1f)) { alMover(60) }
             }
         }
     }
@@ -151,9 +157,13 @@ private fun SelectorDeHora(etiqueta: String, valor: LocalTime, alMover: (Long) -
 
 /** El lector de pantalla dice qué hace el botón, no «menos quince». */
 @Composable
-private fun BotonDeAjuste(texto: String, descripcion: String, alTocar: () -> Unit) {
-    OutlinedButton(onClick = alTocar, modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = descripcion }) {
-        Text(texto)
+private fun BotonDeAjuste(texto: String, descripcion: String, modifier: Modifier, alTocar: () -> Unit) {
+    OutlinedButton(
+        onClick = alTocar,
+        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
+        modifier = modifier.heightIn(min = 48.dp).semantics { contentDescription = descripcion },
+    ) {
+        Text(texto, maxLines = 1, softWrap = false)
     }
 }
 
