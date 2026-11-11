@@ -34,7 +34,8 @@ cd core && ./gradlew bootRun --args='--spring.profiles.active=local'
 cd farmacia && npm run dev        # en otra terminal; ver farmacia/README.md
 ```
 
-El perfil `local` de `core` carga `local/semilla`: diez productos sintéticos en la comuna
+El perfil `local` de `core` carga `local/semilla`: doce productos sintéticos y tres de demostración
+(con el GTIN de su envase, para probar el lector con cajas reales) en la comuna
 13123, la de los usuarios de prueba. Para partir de cero:
 `docker compose -f infra/local/compose.yaml down -v`.
 
