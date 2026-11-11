@@ -135,7 +135,8 @@ class EmisionTest : PruebaIntegracion() {
         assertEquals("usuario-de-prueba", fila["emitida_por"])
         assertEquals("prueba-1", fila["kid"])
         val productos = json.readTree(fila["productos"].toString())
-        assertEquals(setOf("gtin", "du", "e", "co"), productos.get(0).propertyNames().asSequence().toSet())
+        // Solo lo necesario para auditar y proyectar la demanda (HU-27): nada del paciente.
+        assertEquals(setOf("gtin", "du", "e", "co", "u"), productos.get(0).propertyNames().asSequence().toSet())
     }
 
     @Test

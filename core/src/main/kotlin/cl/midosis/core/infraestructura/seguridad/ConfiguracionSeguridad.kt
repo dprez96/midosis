@@ -33,6 +33,9 @@ class ConfiguracionSeguridad {
                 // Las plantillas son contenido clínico de la comuna: solo el químico
                 // farmacéutico las crea (HU-03). Consultarlas puede cualquier perfil.
                 it.requestMatchers(HttpMethod.POST, "/api/catalogo/productos/*/plantillas").hasAuthority(AUTORIDAD_QF)
+                // La proyección de la demanda es para programar la compra a CENABAST, que hace el
+                // químico farmacéutico (HU-27).
+                it.requestMatchers("/api/demanda").hasAuthority(AUTORIDAD_QF)
                 it.anyRequest().authenticated()
             }
             .oauth2ResourceServer { servidor -> servidor.jwt { it.jwtAuthenticationConverter(rolesDelToken()) } }

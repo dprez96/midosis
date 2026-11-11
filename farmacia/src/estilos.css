@@ -203,6 +203,36 @@ button.enlace {
   gap: 8px;
 }
 
+/* ---------------------------------------------------------------- tablas */
+
+.tabla-con-desplazamiento {
+  overflow-x: auto;
+}
+
+.tabla {
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.tabla caption {
+  text-align: left;
+  font-weight: 600;
+  padding-bottom: 8px;
+}
+
+.tabla th,
+.tabla td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--borde);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.tabla th[scope='row'],
+.tabla thead th:first-child {
+  text-align: left;
+}
+
 /* ---------------------------------------------------------------- avisos */
 
 .estado:empty {

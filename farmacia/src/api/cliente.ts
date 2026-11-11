@@ -50,7 +50,21 @@ export interface ApiDeRevocacion {
   revocar(id: string, motivo: string): Promise<void>
 }
 
-export type ApiDelMeson = ApiDeCatalogo & ApiDePlantillas & ApiDeEmision & ApiDeRevocacion
+/** La demanda proyectada de la comuna (HU-27), tal como la entrega core. */
+export interface DemandaProyectada {
+  /** El lunes de cada semana, AAAA-MM-DD. */
+  semanas: string[]
+  productos: { gtin: string; nombre: string; unidades: number[]; tasaDeRetorno: number }[]
+  supuesto: string
+  desviacion: { gtin: string; nombre: string; semana: string; proyectado: number; real: number }[]
+}
+
+export interface ApiDeDemanda {
+  /** Solo el químico farmacéutico; core responde 403 a cualquier otro rol. */
+  demanda(): Promise<DemandaProyectada>
+}
+
+export type ApiDelMeson = ApiDeCatalogo & ApiDePlantillas & ApiDeEmision & ApiDeRevocacion & ApiDeDemanda
 
 const MENSAJES_POR_ESTADO: Record<number, string> = {
   401: 'La sesión expiró. Vuelva a iniciar sesión.',
@@ -127,6 +141,10 @@ export function crearApi(obtenerToken: ObtenerToken, base = '/api'): ApiDelMeson
 
     recientes() {
       return pedir<EmisionReciente[]>('/emisiones/recientes')
+    },
+
+    demanda() {
+      return pedir<DemandaProyectada>('/demanda')
     },
 
     async revocar(id, motivo) {

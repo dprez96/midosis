@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { ApiDelMeson } from './api/cliente'
 import { CodigosEmitidos } from './emisiones/CodigosEmitidos'
+import { Demanda } from './demanda/Demanda'
 import { PantallaMeson } from './meson/PantallaMeson'
 import { PantallaIngreso } from './sesion/PantallaIngreso'
 import { NOMBRE_DEL_ROL, type Perfil, type ServicioDeSesion } from './sesion/sesion'
@@ -31,7 +32,7 @@ export function App({ servicio, api }: Props) {
       <Encabezado perfil={perfil} cerrar={servicio.cerrar} />
       <main className="contenido">
         {perfil.comuna && perfil.rol ? (
-          <Secciones api={api} puedeGuardarPlantillas={perfil.rol === 'qf'} />
+          <Secciones api={api} esQf={perfil.rol === 'qf'} />
         ) : (
           <PerfilIncompleto />
         )}
@@ -40,13 +41,14 @@ export function App({ servicio, api }: Props) {
   )
 }
 
-type Seccion = 'meson' | 'emitidos'
+type Seccion = 'meson' | 'emitidos' | 'demanda'
 
 /**
- * El mesón y los códigos emitidos. El mesón sigue montado mientras se revisan los códigos:
- * volver a él no pierde la atención en curso.
+ * El mesón, los códigos emitidos y, para el químico farmacéutico, la demanda proyectada
+ * (HU-27). El mesón sigue montado mientras se revisa lo demás: volver a él no pierde la
+ * atención en curso. Core vuelve a verificar el rol de cada consulta.
  */
-function Secciones({ api, puedeGuardarPlantillas }: { api: ApiDelMeson; puedeGuardarPlantillas: boolean }) {
+function Secciones({ api, esQf }: { api: ApiDelMeson; esQf: boolean }) {
   const [seccion, setSeccion] = useState<Seccion>('meson')
   return (
     <>
@@ -61,11 +63,21 @@ function Secciones({ api, puedeGuardarPlantillas }: { api: ApiDelMeson; puedeGua
         >
           Códigos emitidos
         </button>
+        {esQf && (
+          <button
+            type="button"
+            aria-current={seccion === 'demanda' ? 'page' : undefined}
+            onClick={() => setSeccion('demanda')}
+          >
+            Demanda proyectada
+          </button>
+        )}
       </nav>
       <div hidden={seccion !== 'meson'}>
-        <PantallaMeson api={api} puedeGuardarPlantillas={puedeGuardarPlantillas} />
+        <PantallaMeson api={api} puedeGuardarPlantillas={esQf} />
       </div>
       {seccion === 'emitidos' && <CodigosEmitidos api={api} />}
+      {seccion === 'demanda' && esQf && <Demanda api={api} />}
     </>
   )
 }
