@@ -155,6 +155,12 @@ internal fun PruebaDeAlarmas(rutina: RutinaGuardada?, alAjustarRutina: () -> Uni
         ) {
             Text("Serie de banco: cada 30 min por 24 h")
         }
+        Button(
+            onClick = { programar(SerieDePrueba.serie(LocalDateTime.now(), Duration.ofMinutes(30), Duration.ofDays(30))) },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Serie de banco: cada 30 min por 30 días")
+        }
         OutlinedButton(
             onClick = {
                 programador.cancelarTodas()
