@@ -41,6 +41,7 @@ import cl.midosis.paciente.alarmas.Diagnostico
 import cl.midosis.paciente.alarmas.PlanDeAlarmas
 import cl.midosis.paciente.alarmas.ProgramadorDeAlarmas
 import cl.midosis.paciente.tratamiento.Planificacion
+import cl.midosis.paciente.privacidad.Supresion
 import cl.midosis.paciente.tratamiento.RevisionDelPlan
 import java.time.Instant
 import java.time.LocalDateTime
@@ -58,6 +59,8 @@ private sealed interface Pantalla {
     data class Entrevistar(val entrevista: Entrevista) : Pantalla
     data object Pruebas : Pantalla
     data object Permisos : Pantalla
+    data object Privacidad : Pantalla
+    data object Borrado : Pantalla
     data class Revisar(val tratamiento: TratamientoGuardado, val revision: RevisionDelPlan) : Pantalla
 }
 
@@ -136,6 +139,23 @@ fun AppPaciente() {
             alAjustarRutina = { pantalla = Pantalla.Entrevistar(rutina?.let { Entrevista.desde(it.rutina) } ?: Entrevista()) },
             alAbrirPruebas = { pantalla = Pantalla.Pruebas },
             alRevisarPermisos = { pantalla = Pantalla.Permisos },
+            alAbrirPrivacidad = { pantalla = Pantalla.Privacidad },
+        )
+        Pantalla.Privacidad -> Privacidad(
+            alBorrar = {
+                Supresion.ejecutar(contexto)
+                lista = emptyList()
+                rutina = null
+                porProgramar = null
+                pantalla = Pantalla.Borrado
+            },
+            alVolver = { pantalla = Pantalla.Inicio },
+        )
+        Pantalla.Borrado -> Aviso(
+            titulo = "Se borraron todos tus datos",
+            explicacion = "Ya no queda en este teléfono ningún tratamiento, horario ni alarma de MiDosis.",
+            alReintentar = null,
+            alVolver = { pantalla = Pantalla.Inicio },
         )
         Pantalla.Escanear -> Marco("Carga tu tratamiento") {
             Text("Apunta la cámara al código impreso en el comprobante de la farmacia.")
@@ -205,6 +225,7 @@ private fun Inicio(
     alAjustarRutina: () -> Unit,
     alAbrirPruebas: () -> Unit,
     alRevisarPermisos: () -> Unit,
+    alAbrirPrivacidad: () -> Unit,
 ) {
     Marco("MiDosis") {
         if (tratamientos.isEmpty()) {
@@ -225,6 +246,7 @@ private fun Inicio(
             TextButton(onClick = alAjustarRutina) { Text("Ajustar mis horarios") }
             if (rutina.porDefecto) Text("Usamos horarios habituales. Ajústalos para que las alarmas calcen con tu día.")
         }
+        TextButton(onClick = alAbrirPrivacidad) { Text("Privacidad y mis datos") }
         if (BuildConfig.DEBUG) TextButton(onClick = alAbrirPruebas) { Text("Herramientas de prueba") }
     }
 }
