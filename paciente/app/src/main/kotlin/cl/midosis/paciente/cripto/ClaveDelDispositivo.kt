@@ -34,4 +34,12 @@ object ClaveDelDispositivo {
         )
         return generador.generateKey()
     }
+
+    /**
+     * Destruye la clave (HU-25). Lo que quede cifrado con ella en cualquier parte del teléfono
+     * se vuelve ilegible; la próxima vez que se necesite, se genera una nueva.
+     */
+    fun borrar() {
+        KeyStore.getInstance(ALMACEN).apply { load(null) }.deleteEntry(ALIAS)
+    }
 }

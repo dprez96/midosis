@@ -73,6 +73,21 @@ class BusquedaEnCatalogoTest : PruebaIntegracion() {
     }
 
     @Test
+    fun `lo que empieza con lo escrito va antes que lo que solo lo contiene`() {
+        contexto.en(providencia) {
+            catalogo.guardar(producto("780225001320", "Paracetamol 500 mg", "Paracetamol", "500 mg"))
+            catalogo.guardar(producto("780225001330", "Clonazepam 0,5 mg", "Clonazepam", "0,5 mg"))
+            catalogo.guardar(producto("780225001340", "Kitadol 500 mg", "Paracetamol", "500 mg"))
+        }
+        // Paracetamol empieza con «pa»; Kitadol coincide por su principio activo; Clonazepam
+        // solo lo contiene en medio.
+        buscar("pa").andExpect {
+            status { isOk() }
+            jsonPath("$[*].nombre") { value(contains("Paracetamol 500 mg", "Kitadol 500 mg", "Clonazepam 0,5 mg")) }
+        }
+    }
+
+    @Test
     fun `los comodines no traen el catalogo completo`() {
         buscar("%%").andExpect {
             status { isOk() }
