@@ -61,6 +61,7 @@ private sealed interface Pantalla {
     data object Pruebas : Pantalla
     data object Permisos : Pantalla
     data object Privacidad : Pantalla
+    data object Voz : Pantalla
     data object Borrado : Pantalla
     data class Revisar(val tratamiento: TratamientoGuardado, val revision: RevisionDelPlan) : Pantalla
 }
@@ -142,6 +143,7 @@ fun AppPaciente() {
             alAbrirPruebas = { pantalla = Pantalla.Pruebas },
             alRevisarPermisos = { pantalla = Pantalla.Permisos },
             alAbrirPrivacidad = { pantalla = Pantalla.Privacidad },
+            alAbrirVoz = { pantalla = Pantalla.Voz },
         )
         Pantalla.Privacidad -> Privacidad(
             alBorrar = {
@@ -153,6 +155,7 @@ fun AppPaciente() {
             },
             alVolver = { pantalla = Pantalla.Inicio },
         )
+        Pantalla.Voz -> LecturaEnVozAlta(alVolver = { pantalla = Pantalla.Inicio })
         Pantalla.Borrado -> Aviso(
             titulo = "Se borraron todos tus datos",
             explicacion = "Ya no queda en este teléfono ningún tratamiento, horario ni alarma de MiDosis.",
@@ -228,6 +231,7 @@ private fun Inicio(
     alAbrirPruebas: () -> Unit,
     alRevisarPermisos: () -> Unit,
     alAbrirPrivacidad: () -> Unit,
+    alAbrirVoz: () -> Unit,
 ) {
     Marco("MiDosis") {
         if (tratamientos.isEmpty()) {
@@ -248,6 +252,7 @@ private fun Inicio(
             TextButton(onClick = alAjustarRutina) { Text("Ajustar mis horarios") }
             if (rutina.porDefecto) Text("Usamos horarios habituales. Ajústalos para que las alarmas calcen con tu día.")
         }
+        TextButton(onClick = alAbrirVoz) { Text("Lectura en voz alta") }
         TextButton(onClick = alAbrirPrivacidad) { Text("Privacidad y mis datos") }
         if (BuildConfig.DEBUG) TextButton(onClick = alAbrirPruebas) { Text("Herramientas de prueba") }
     }
