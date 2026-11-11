@@ -45,6 +45,11 @@ class CatalogoJdbc(private val jdbc: JdbcClient) : CatalogoDeProductos {
      * habría que instalar en cada base. El término llega ya normalizado de la misma forma
      * (ver [TerminoDeBusqueda.normalizar]), y los comodines de LIKE que traiga se escapan:
      * buscar «%» no puede traer el catálogo completo.
+     *
+     * Los resultados van por relevancia y después por nombre: primero los productos cuyo
+     * nombre empieza con lo escrito, luego los que tienen una palabra que empieza así, luego
+     * los que coinciden por el principio activo y al final los que solo lo contienen. Con
+     * «pa», Paracetamol va antes que Clonazepam, que tiene «pa» en medio.
      */
     override fun buscarPorTexto(termino: TerminoDeBusqueda, limite: Int): List<Producto> {
         val literal = escaparComodines(termino.normalizado)
@@ -54,7 +59,16 @@ class CatalogoJdbc(private val jdbc: JdbcClient) : CatalogoDeProductos {
             WHERE translate(lower(nombre || ' ' || principio_activo), :conTilde, :sinTilde)
                   LIKE :contiene ESCAPE '\'
                OR gtin LIKE :comienza ESCAPE '\'
-            ORDER BY nombre, gtin
+            ORDER BY
+                CASE
+                    WHEN translate(lower(nombre), :conTilde, :sinTilde) LIKE :comienza ESCAPE '\' THEN 0
+                    WHEN translate(lower(nombre), :conTilde, :sinTilde) LIKE :palabra ESCAPE '\' THEN 1
+                    WHEN gtin LIKE :comienza ESCAPE '\' THEN 1
+                    WHEN translate(lower(principio_activo), :conTilde, :sinTilde) LIKE :comienza ESCAPE '\'
+                      OR translate(lower(principio_activo), :conTilde, :sinTilde) LIKE :palabra ESCAPE '\' THEN 2
+                    ELSE 3
+                END,
+                nombre, gtin
             LIMIT :limite
             """.trimIndent()
         )
@@ -62,6 +76,7 @@ class CatalogoJdbc(private val jdbc: JdbcClient) : CatalogoDeProductos {
             .param("sinTilde", SIN_TILDE)
             .param("contiene", "%$literal%")
             .param("comienza", "$literal%")
+            .param("palabra", "% $literal%")
             .param("limite", limite)
             .query(fila)
             .list()

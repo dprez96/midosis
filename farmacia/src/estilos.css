@@ -404,83 +404,108 @@ button.enlace {
 }
 
 /*
- * Al imprimir solo sale el comprobante, en el rollo de 80 mm de la impresora térmica del mesón:
- * su ancho imprimible es de 72 mm (576 puntos a 203 ppp). Una sola columna, todo en negro (el
- * gris sale tramado) y el QR a lo ancho del papel, muy por sobre el mínimo de 25 mm de la tabla
- * 87: mientras más grande, mejor lo lee la cámara de un teléfono antiguo. La zona tranquila de
- * 4 módulos ya viene dentro del dibujo. El largo de la hoja lo pone el controlador de la
- * impresora (rollo continuo): aquí solo se quitan los márgenes.
+ * Al imprimir solo sale el comprobante, en el rollo de 80 mm de la impresora térmica del mesón.
+ * Mientras se imprime, el documento lleva la clase «imprimiendo» (meson/impresion.ts).
+ *
+ * Todo lo que no es el comprobante ni lo contiene se oculta con display: con visibility conservaba
+ * su espacio y la pantalla del mesón salía como hojas en blanco a continuación del comprobante.
+ *
+ * El QR ocupa 72 mm, todo el ancho imprimible: mientras más grande, mejor lo lee la cámara
+ * de un teléfono antiguo. El texto queda en 64 mm: el área imprimible de las térmicas de 80 mm va
+ * de 64 a 72 mm según el modelo, y en la Xprinter del mesón el texto a 72 mm salía cortado a la
+ * derecha. Todo en negro (el gris sale tramado). La zona tranquila de 4 módulos viene en el dibujo.
+ * El largo de la hoja lo fija impresion.ts al medir el comprobante; aquí solo se quitan los márgenes.
  */
 @page {
   margin: 0;
 }
 
-@media print {
-  body {
-    background: #fff;
-  }
+html.imprimiendo body {
+  margin: 0;
+  background: #fff;
+}
 
-  body * {
-    visibility: hidden;
-  }
+html.imprimiendo body *:not(:has(.comprobante)):not(.comprobante):not(.comprobante *) {
+  display: none !important;
+}
 
-  .comprobante,
-  .comprobante * {
-    visibility: visible;
-    color: #000;
-  }
+html.imprimiendo body *:has(.comprobante) {
+  display: block !important;
+  position: static !important;
+  width: auto !important;
+  max-width: none !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  background: none !important;
+}
 
-  .comprobante {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 72mm;
-    margin: 0 4mm;
-    padding: 2mm 0 6mm;
-    gap: 3mm;
-    border: none;
-    border-radius: 0;
-    box-shadow: none;
-    background: #fff;
-    font-size: 10pt;
-    line-height: 1.3;
-  }
+html.imprimiendo .comprobante {
+  box-sizing: border-box;
+  display: grid;
+  gap: 3mm;
+  width: 72mm;
+  margin: 0;
+  padding: 2mm 0 4mm;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: #fff;
+  font-size: 10pt;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
 
-  .comprobante h2 {
-    font-size: 11pt;
-    text-align: center;
-  }
+html.imprimiendo .comprobante,
+html.imprimiendo .comprobante * {
+  color: #000;
+}
 
-  .comprobante .qr-y-respaldo {
-    display: block;
-  }
+html.imprimiendo .comprobante h2 {
+  margin: 0;
+  font-size: 10.5pt;
+  text-align: center;
+}
 
-  .codigo-qr {
-    display: block;
-    width: 72mm;
-    height: 72mm;
-  }
+html.imprimiendo .comprobante .qr-y-respaldo {
+  display: block;
+}
 
-  .comprobante .qr-y-respaldo p {
-    margin-top: 1.5mm;
-    text-align: center;
-  }
+html.imprimiendo .codigo-qr {
+  display: block;
+  width: 72mm;
+  height: 72mm;
+}
 
-  .comprobante .secundario {
-    font-size: inherit;
-  }
+/* El texto, más angosto que el QR, para que no lo corte el borde derecho. */
+html.imprimiendo .comprobante > :not(.qr-y-respaldo),
+html.imprimiendo .comprobante .qr-y-respaldo > div {
+  box-sizing: border-box;
+  width: 64mm;
+}
 
-  .codigo-corto {
-    font-size: 13pt;
-    white-space: nowrap;
-  }
+html.imprimiendo .comprobante .qr-y-respaldo p {
+  margin-top: 1.5mm;
+  text-align: center;
+}
 
-  .lineas-comprobante {
-    gap: 2mm;
-    padding-left: 5mm;
-  }
+html.imprimiendo .comprobante .secundario {
+  font-size: inherit;
+}
 
-  .comprobante .no-imprimir {
-    display: none;
-  }
+html.imprimiendo .codigo-corto {
+  font-size: 12pt;
+  white-space: nowrap;
+}
+
+html.imprimiendo .lineas-comprobante {
+  gap: 2mm;
+  margin: 0;
+  padding-left: 5mm;
+}
+
+html.imprimiendo .comprobante .no-imprimir {
+  display: none !important;
 }
