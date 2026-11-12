@@ -73,4 +73,17 @@ class RevisionDelPlanTest {
         assertEquals(90, tomas.size)
         assertEquals(movida.planes[1].plan.tomas.first(), tomas.filter { it.producto == "Atorvastatina" }.minOf { it.momento })
     }
+
+    @Test
+    fun `una toma cada 8 horas cae de noche y se anuncia`() {
+        val cada8 = tratamiento.copy(carga = tratamiento.carga.copy(productos = listOf(producto("Amoxicilina", "PT8H", 21))))
+        val r = RevisionDelPlan(Planificacion.proponer(cada8, Rutina.POR_DEFECTO, ahora))
+        // Primera a las 10:15, luego 18:15 y 02:15: solo la última cae mientras duerme.
+        assertEquals(listOf(java.time.LocalTime.of(2, 15)), r.horasNocturnas(Rutina.POR_DEFECTO))
+    }
+
+    @Test
+    fun `sin tomas de noche no hay nada que anunciar`() {
+        assertTrue(revision.horasNocturnas(Rutina.POR_DEFECTO).isEmpty())
+    }
 }

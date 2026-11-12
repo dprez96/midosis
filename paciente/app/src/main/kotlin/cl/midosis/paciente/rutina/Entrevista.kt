@@ -4,7 +4,7 @@ import cl.midosis.motor.rutina.Rutina
 import java.time.LocalTime
 
 /**
- * La entrevista de rutina (HU-13, CU-P-02): cinco pasos, todos con la rutina por defecto ya
+ * La entrevista de rutina (HU-13, CU-P-02): cuatro pasos, todos con la rutina por defecto ya
  * puesta, para que quien la acepte termine en pocos toques y muy por debajo de 45 segundos.
  *
  * Es un estado inmutable sin nada de Android, para probarlo en la computadora.
@@ -16,9 +16,12 @@ data class Entrevista(
     val almuerzo: LocalTime = Rutina.POR_DEFECTO.almuerzo,
     val cena: LocalTime = Rutina.POR_DEFECTO.cena,
     val acostarse: LocalTime = Rutina.POR_DEFECTO.acostarse,
-    val toleraAlarmasNocturnas: Boolean = Rutina.POR_DEFECTO.toleraAlarmasNocturnas,
 ) {
-    enum class Paso(val numero: Int) { DESPERTAR(1), COMIDAS(2), ACOSTARSE(3), NOCHE(4), RESUMEN(5) }
+    /**
+     * No se pregunta si acepta alarmas de noche: si el tratamiento las necesita suenan igual
+     * (RN-15), y la víspera se avisa antes de acostarse (AvisosNocturnos).
+     */
+    enum class Paso(val numero: Int) { DESPERTAR(1), COMIDAS(2), ACOSTARSE(3), RESUMEN(4) }
 
     enum class Hora { DESPERTAR, DESAYUNO, ALMUERZO, CENA, ACOSTARSE }
 
@@ -64,7 +67,7 @@ data class Entrevista(
         if (Rutina.problema(despertar, desayuno, almuerzo, cena, acostarse) != null) {
             null
         } else {
-            Rutina(despertar, desayuno, almuerzo, cena, acostarse, toleraAlarmasNocturnas)
+            Rutina(despertar, desayuno, almuerzo, cena, acostarse)
         }
 
     companion object {
@@ -75,7 +78,6 @@ data class Entrevista(
             almuerzo = r.almuerzo,
             cena = r.cena,
             acostarse = r.acostarse,
-            toleraAlarmasNocturnas = r.toleraAlarmasNocturnas,
         )
     }
 }

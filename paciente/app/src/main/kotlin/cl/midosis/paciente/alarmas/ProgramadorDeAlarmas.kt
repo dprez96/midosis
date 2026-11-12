@@ -40,6 +40,7 @@ class ProgramadorDeAlarmas(
         // Se guarda todo: lo que no se entrega ahora se entrega cuando la ventana avance o
         // cuando el paciente conceda el permiso que falta.
         almacen.agregar(plan, ahora)
+        AvisosNocturnosEnElTelefono.programar(contexto, almacen.leer(), ahora)
         return entregar(dentroDeLaVentana(plan, ahora)).size
     }
 
@@ -48,8 +49,12 @@ class ProgramadorDeAlarmas(
      * llama al encender el teléfono, al actualizar la aplicación y cada vez que suena una
      * alarma, que es lo que hace avanzar la ventana. Devuelve cuántas se programaron.
      */
-    fun reprogramarGuardadas(ahora: LocalDateTime = LocalDateTime.now()): Int =
-        entregar(dentroDeLaVentana(almacen.leer(), ahora)).size
+    fun reprogramarGuardadas(ahora: LocalDateTime = LocalDateTime.now()): Int {
+        val guardadas = almacen.leer()
+        // Los avisos de alarmas nocturnas avanzan con la misma ventana.
+        AvisosNocturnosEnElTelefono.programar(contexto, guardadas, ahora)
+        return entregar(dentroDeLaVentana(guardadas, ahora)).size
+    }
 
     /** Cancela todas las alarmas que esta aplicación dejó programadas. */
     fun cancelarTodas() {
@@ -58,6 +63,7 @@ class ProgramadorDeAlarmas(
             cancelarRecordatorios(solicitud.id)
         }
         almacen.vaciar()
+        AvisosNocturnosEnElTelefono.cancelar(contexto)
     }
 
     /**
