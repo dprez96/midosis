@@ -17,11 +17,6 @@ data class Rutina(
     val almuerzo: LocalTime,
     val cena: LocalTime,
     val acostarse: LocalTime,
-    /**
-     * Si acepta que una alarma lo despierte. Con intervalos de 8 horas o menos el
-     * tratamiento las exige igual (RN-15); con 12 o más se privilegia la vigilia.
-     */
-    val toleraAlarmasNocturnas: Boolean = true,
 ) {
     init {
         problema(despertar, desayuno, almuerzo, cena, acostarse)?.let { throw RutinaInvalida(it) }

@@ -76,6 +76,11 @@
             android:name=".alarmas.ReceptorDeRetiro"
             android:exported="false" />
 
+        <!-- El aviso, antes de acostarse, de que esa noche sonará una alarma. -->
+        <receiver
+            android:name=".alarmas.ReceptorDeAvisoNocturno"
+            android:exported="false" />
+
         <receiver
             android:name=".alarmas.ReceptorDeArranque"
             android:exported="false">

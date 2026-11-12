@@ -24,20 +24,25 @@ class AlmacenDeRutina(private val archivo: ArchivoCifrado) {
  */
 data class RutinaGuardada(val rutina: Rutina, val porDefecto: Boolean)
 
-/** Una línea de texto: «07:00;08:00;13:00;20:00;23:00;nocturnas=si;defecto=no». */
+/**
+ * Una línea de texto: «07:00;08:00;13:00;20:00;23:00;defecto=no». Las versiones anteriores
+ * guardaban además «nocturnas=si» antes de «defecto»: se lee y se descarta, porque ya no se
+ * pregunta.
+ */
 object FormatoDeRutina {
     fun escribir(g: RutinaGuardada): String = with(g.rutina) {
         listOf(despertar, desayuno, almuerzo, cena, acostarse).joinToString(";") { it.toString() } +
-            ";nocturnas=${siNo(toleraAlarmasNocturnas)};defecto=${siNo(g.porDefecto)}"
+            ";defecto=${siNo(g.porDefecto)}"
     }
 
     fun leer(texto: String): RutinaGuardada {
         val partes = texto.trim().split(";")
-        require(partes.size == 7) { "rutina guardada con ${partes.size} campos" }
+        require(partes.size == 6 || partes.size == 7) { "rutina guardada con ${partes.size} campos" }
+        if (partes.size == 7) valor(partes[5], "nocturnas")
         val horas = partes.take(5).map(LocalTime::parse)
         return RutinaGuardada(
-            rutina = Rutina(horas[0], horas[1], horas[2], horas[3], horas[4], toleraAlarmasNocturnas = valor(partes[5], "nocturnas")),
-            porDefecto = valor(partes[6], "defecto"),
+            rutina = Rutina(horas[0], horas[1], horas[2], horas[3], horas[4]),
+            porDefecto = valor(partes.last(), "defecto"),
         )
     }
 

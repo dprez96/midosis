@@ -11,6 +11,10 @@
     <string name="canal_retiros">Retiros en la farmacia</string>
     <string name="canal_retiros_descripcion">Avisa unos días antes de que se acabe lo que retiraste, para volver a la farmacia a tiempo.</string>
     <string name="retiro_titulo">Vuelve pronto a la farmacia</string>
+    <string name="canal_nocturnas">Alarmas durante la noche</string>
+    <string name="canal_nocturnas_descripcion">Avisa antes de acostarte que esa noche sonará una alarma por una toma.</string>
+    <string name="nocturna_titulo">Esta noche sonará una alarma</string>
+    <string name="nocturna_cuerpo">Tu tratamiento lo necesita. Deja el teléfono cerca y con volumen.</string>
     <string name="retiro_cuerpo">Tu tratamiento sigue: retira lo que viene para no interrumpirlo.</string>
 
     <!-- Rechazos al leer un código (HU-09). Cada uno pide algo distinto al paciente. -->

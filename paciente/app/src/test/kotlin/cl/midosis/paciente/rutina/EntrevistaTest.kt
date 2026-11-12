@@ -11,14 +11,14 @@ class EntrevistaTest {
     private fun h(texto: String) = LocalTime.parse(texto)
 
     @Test
-    fun `aceptar lo propuesto toma cinco pasos y da la rutina por defecto`() {
+    fun `aceptar lo propuesto toma cuatro pasos y da la rutina por defecto`() {
         var e = Entrevista()
         val pasos = mutableListOf(e.paso.numero)
-        repeat(4) {
+        repeat(3) {
             e = e.siguiente()
             pasos += e.paso.numero
         }
-        assertEquals(listOf(1, 2, 3, 4, 5), pasos)
+        assertEquals(listOf(1, 2, 3, 4), pasos)
         assertEquals(Rutina.POR_DEFECTO, e.rutina())
     }
 
@@ -51,14 +51,20 @@ class EntrevistaTest {
 
     @Test
     fun `ajustar parte desde la rutina guardada`() {
-        val propia = Rutina(h("06:00"), h("06:30"), h("12:30"), h("19:30"), h("22:00"), toleraAlarmasNocturnas = false)
+        val propia = Rutina(h("06:00"), h("06:30"), h("12:30"), h("19:30"), h("22:00"))
         assertEquals(propia, Entrevista.desde(propia).rutina())
     }
 
     @Test
     fun `el formato guardado va y vuelve`() {
-        val g = RutinaGuardada(Rutina(h("09:00"), h("09:30"), h("14:00"), h("21:30"), h("01:00"), false), porDefecto = false)
+        val g = RutinaGuardada(Rutina(h("09:00"), h("09:30"), h("14:00"), h("21:30"), h("01:00")), porDefecto = false)
         assertEquals(g, FormatoDeRutina.leer(FormatoDeRutina.escribir(g)))
-        assertEquals("07:00;08:00;13:00;20:00;23:00;nocturnas=si;defecto=si", FormatoDeRutina.escribir(RutinaGuardada(Rutina.POR_DEFECTO, true)))
+        assertEquals("07:00;08:00;13:00;20:00;23:00;defecto=si", FormatoDeRutina.escribir(RutinaGuardada(Rutina.POR_DEFECTO, true)))
+    }
+
+    @Test
+    fun `una rutina guardada por una versión anterior se sigue leyendo`() {
+        val g = FormatoDeRutina.leer("06:00;06:30;12:30;19:30;22:00;nocturnas=no;defecto=no")
+        assertEquals(RutinaGuardada(Rutina(h("06:00"), h("06:30"), h("12:30"), h("19:30"), h("22:00")), porDefecto = false), g)
     }
 }

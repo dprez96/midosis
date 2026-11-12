@@ -12,6 +12,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -27,6 +28,8 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import cl.midosis.motor.rutina.Rutina
+import cl.midosis.paciente.alarmas.AvisosNocturnos
 import cl.midosis.paciente.tratamiento.RevisionDelPlan
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -38,7 +41,7 @@ import java.time.format.DateTimeFormatter
  * intervalo de la posología se mantiene siempre.
  */
 @Composable
-fun RevisarPlan(inicial: RevisionDelPlan, alConfirmar: (RevisionDelPlan) -> Unit, alUsarPropuesto: () -> Unit) {
+fun RevisarPlan(inicial: RevisionDelPlan, rutina: Rutina, alConfirmar: (RevisionDelPlan) -> Unit, alUsarPropuesto: () -> Unit) {
     var revision by remember { mutableStateOf(inicial) }
 
     Column(
@@ -66,6 +69,20 @@ fun RevisarPlan(inicial: RevisionDelPlan, alConfirmar: (RevisionDelPlan) -> Unit
                             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                         )
                     }
+                }
+            }
+        }
+
+        val nocturnas = revision.horasNocturnas(rutina)
+        if (nocturnas.isNotEmpty()) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                modifier = Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite },
+            ) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Sonará una alarma mientras duermes", style = MaterialTheme.typography.titleMedium)
+                    Text("${AvisosNocturnos.frase(nocturnas)} Tu tratamiento lo necesita.")
+                    Text("Cada noche que toque, te avisaremos antes de acostarte para que dejes el teléfono cerca y con volumen.")
                 }
             }
         }

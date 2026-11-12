@@ -120,6 +120,8 @@ fun AppPaciente() {
     fun guardarRutina(guardada: RutinaGuardada) {
         rutinas.guardar(guardada)
         rutina = guardada
+        // La hora de acostarse cambia la del aviso de alarmas nocturnas.
+        programador.reprogramarGuardadas()
         val pendiente = porProgramar
         porProgramar = null
         if (pendiente != null) revisarPlan(pendiente, guardada) else pantalla = Pantalla.Inicio
@@ -206,6 +208,7 @@ fun AppPaciente() {
         )
         is Pantalla.Revisar -> RevisarPlan(
             inicial = p.revision,
+            rutina = rutina?.rutina ?: Rutina.POR_DEFECTO,
             alConfirmar = { programarAlarmas(p.tratamiento, it) },
             alUsarPropuesto = { programarAlarmas(p.tratamiento, p.revision) },
         )

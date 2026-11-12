@@ -2,6 +2,7 @@ package cl.midosis.paciente
 
 import android.app.Application
 import cl.midosis.paciente.alarmas.AvisosDeRetiroEnElTelefono
+import cl.midosis.paciente.alarmas.AvisosNocturnosEnElTelefono
 import cl.midosis.paciente.alarmas.CanalDeTomas
 
 class AplicacionMiDosis : Application() {
@@ -11,5 +12,6 @@ class AplicacionMiDosis : Application() {
         // se ha abierto desde que se reinició el teléfono.
         CanalDeTomas.crear(this)
         AvisosDeRetiroEnElTelefono.crearCanal(this)
+        AvisosNocturnosEnElTelefono.crearCanal(this)
     }
 }

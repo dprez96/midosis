@@ -1,8 +1,10 @@
 package cl.midosis.paciente.tratamiento
 
 import cl.midosis.motor.planificacion.PlanEditable
+import cl.midosis.motor.rutina.Rutina
 import java.time.Duration
 import java.time.LocalDateTime
+import java.time.LocalTime
 
 /**
  * El paso en que el paciente revisa el calendario propuesto y lo ajusta antes de confirmarlo
@@ -25,6 +27,17 @@ data class RevisionDelPlan(
         val limite = tomas.first().plus(UN_DIA)
         return tomas.indices.filter { tomas[it].isBefore(limite) }
     }
+
+    /**
+     * Las horas de las tomas visibles que caen mientras el paciente duerme, sin repetir y en el
+     * orden del reloj. Suenan igual (RN-15): la pantalla lo dice antes de activar las alarmas.
+     */
+    fun horasNocturnas(rutina: Rutina): List<LocalTime> =
+        planes.indices
+            .flatMap { i -> visibles(i).map { planes[i].plan.tomas[it].toLocalTime() } }
+            .filter { rutina.duerme(it) && it != rutina.acostarse }
+            .distinct()
+            .sorted()
 
     /** Corre [minutos] todas las tomas de un medicamento; las distancias entre ellas no cambian. */
     fun mover(producto: Int, minutos: Long, ahora: LocalDateTime): RevisionDelPlan {

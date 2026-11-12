@@ -14,7 +14,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -22,7 +21,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
@@ -38,8 +36,7 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
 /**
- * La entrevista de rutina (HU-13): despertar, comidas, acostarse, alarmas nocturnas y
- * resumen. Cada paso trae ya puesta la rutina habitual; quien la acepta solo toca
+ * La entrevista de rutina (HU-13): despertar, comidas, acostarse y resumen. Cada paso trae ya puesta la rutina habitual; quien la acepta solo toca
  * «Siguiente». Se puede omitir en cualquier paso: se aplica la rutina por defecto y se
  * ofrece ajustarla después.
  */
@@ -71,12 +68,6 @@ fun EntrevistaDeRutina(inicial: Entrevista, alTerminar: (Rutina) -> Unit, alOmit
                 Titulo("¿A qué hora te acuestas?")
                 SelectorDeHora("Me acuesto a las", e.acostarse) { e = e.mover(Hora.ACOSTARSE, it) }
             }
-            Paso.NOCHE -> {
-                Titulo("¿Te puede sonar una alarma mientras duermes?")
-                Text("Si tu medicamento es cada 8 horas o menos, puede ser necesario igual.")
-                Opcion("Sí, si mi tratamiento lo necesita", e.toleraAlarmasNocturnas) { e = e.copy(toleraAlarmasNocturnas = true) }
-                Opcion("Prefiero que no", !e.toleraAlarmasNocturnas) { e = e.copy(toleraAlarmasNocturnas = false) }
-            }
             Paso.RESUMEN -> {
                 Titulo("Revisa tus horarios")
                 Card(Modifier.fillMaxWidth()) {
@@ -86,7 +77,6 @@ fun EntrevistaDeRutina(inicial: Entrevista, alTerminar: (Rutina) -> Unit, alOmit
                         Text("Almuerzo: ${hora(e.almuerzo)}")
                         Text("Cena: ${hora(e.cena)}")
                         Text("Te acuestas: ${hora(e.acostarse)}")
-                        Text("Alarmas de noche: ${if (e.toleraAlarmasNocturnas) "sí, si hace falta" else "prefieres que no"}")
                     }
                 }
                 Text("Estos horarios se quedan en tu teléfono. No se envían a nadie.", style = MaterialTheme.typography.bodySmall)
@@ -164,14 +154,6 @@ private fun BotonDeAjuste(texto: String, descripcion: String, modifier: Modifier
         modifier = modifier.heightIn(min = 48.dp).semantics { contentDescription = descripcion },
     ) {
         Text(texto, maxLines = 1, softWrap = false)
-    }
-}
-
-@Composable
-private fun Opcion(texto: String, elegida: Boolean, alElegir: () -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-        RadioButton(selected = elegida, onClick = alElegir)
-        TextButton(onClick = alElegir) { Text(texto) }
     }
 }
 
