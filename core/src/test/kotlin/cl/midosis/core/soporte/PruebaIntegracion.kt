@@ -67,7 +67,7 @@ abstract class PruebaIntegracion {
 
         /** Vacía todas las tablas con datos de comunas. Una tabla nueva se agrega aquí. */
         fun limpiarDatos() {
-            administrador.execute("TRUNCATE emision, sobre, plantilla_posologia, producto, evento_seguridad")
+            administrador.execute("TRUNCATE correccion, emision, sobre, plantilla_posologia, producto, evento_seguridad")
         }
 
         /** Token firmado con el perfil indicado. Por defecto, un auxiliar de farmacia. */

@@ -1,5 +1,6 @@
 package cl.midosis.core.infraestructura.web
 
+import cl.midosis.core.aplicacion.emision.CorreccionDeCodigos
 import cl.midosis.core.aplicacion.emision.EmisionDeCodigos
 import cl.midosis.core.aplicacion.emision.RevocacionDeCodigos
 import org.springframework.web.bind.annotation.GetMapping
@@ -34,7 +35,11 @@ import org.springframework.web.bind.annotation.RestController
 /** Emisión del código al cerrar la atención en el mesón (HU-01, HU-05). */
 @RestController
 @RequestMapping("/api/emisiones")
-class EmisionControlador(private val emision: EmisionDeCodigos, private val revocacion: RevocacionDeCodigos) {
+class EmisionControlador(
+    private val emision: EmisionDeCodigos,
+    private val revocacion: RevocacionDeCodigos,
+    private val correccion: CorreccionDeCodigos,
+) {
 
     data class LineaPeticion(
         val gtin: String?,
@@ -59,17 +64,52 @@ class EmisionControlador(private val emision: EmisionDeCodigos, private val revo
 
     @PostMapping
     fun emitir(@AuthenticationPrincipal jwt: Jwt, @RequestBody peticion: Peticion): ResponseEntity<Respuesta> {
-        val autor = jwt.subject?.takeIf { it.isNotBlank() } ?: throw ComunaNoResuelta("el token no identifica a su usuario")
-        val c = peticion.consentimiento ?: throw EmisionInvalida("sin consentimiento del paciente no se emite el código")
-        val solicitud = SolicitudDeEmision(
-            lineas = peticion.lineas.orEmpty().map(::linea),
+        val emitido = emision.emitir(ResolutorDeComuna.desde(jwt), autor(jwt), solicitud(peticion.lineas, peticion.consentimiento))
+        return ResponseEntity.status(HttpStatus.CREATED).body(Respuesta.de(emitido))
+    }
+
+    data class CorreccionPeticion(
+        val motivo: String?,
+        val instruccion: String?,
+        val lineas: List<LineaPeticion>?,
+        val consentimiento: ConsentimientoPeticion?,
+    )
+
+    /**
+     * Corrección de un tratamiento ya cargado (HU-33): emite el código de reemplazo, ligado al
+     * original, con el motivo y la instrucción para el paciente. Solo el químico farmacéutico.
+     */
+    @PostMapping("/{id}/correccion")
+    fun corregir(
+        @AuthenticationPrincipal jwt: Jwt,
+        @PathVariable id: String,
+        @RequestBody peticion: CorreccionPeticion,
+    ): ResponseEntity<Any> {
+        val motivo = peticion.motivo ?: throw EmisionInvalida("indique el motivo de la corrección")
+        val instruccion = CorreccionDeCodigos.Instruccion.de(peticion.instruccion)
+        val r = correccion.corregir(
+            ResolutorDeComuna.desde(jwt), id, autor(jwt), motivo, instruccion, solicitud(peticion.lineas, peticion.consentimiento),
+        )
+        return when (r) {
+            is CorreccionDeCodigos.Resultado.Corregida -> ResponseEntity.status(HttpStatus.CREATED).body(Respuesta.de(r.reemplazo))
+            CorreccionDeCodigos.Resultado.NoEncontrada -> ResponseEntity.notFound().build()
+            CorreccionDeCodigos.Resultado.YaCorregida -> ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(mapOf("error" to "Ese código ya se corrigió. Para cambiarlo otra vez, corrige el código de reemplazo."))
+        }
+    }
+
+    private fun autor(jwt: Jwt): String =
+        jwt.subject?.takeIf { it.isNotBlank() } ?: throw ComunaNoResuelta("el token no identifica a su usuario")
+
+    private fun solicitud(lineas: List<LineaPeticion>?, c: ConsentimientoPeticion?): SolicitudDeEmision {
+        val consentimiento = c ?: throw EmisionInvalida("sin consentimiento del paciente no se emite el código")
+        return SolicitudDeEmision(
+            lineas = lineas.orEmpty().map(::linea),
             consentimiento = Consentimiento(
-                version = c.version ?: throw EmisionInvalida("falta la versión del consentimiento"),
-                aceptadoEn = c.aceptadoEn ?: throw EmisionInvalida("falta cuándo se aceptó el consentimiento"),
+                version = consentimiento.version ?: throw EmisionInvalida("falta la versión del consentimiento"),
+                aceptadoEn = consentimiento.aceptadoEn ?: throw EmisionInvalida("falta cuándo se aceptó el consentimiento"),
             ),
         )
-        val emitido = emision.emitir(ResolutorDeComuna.desde(jwt), autor, solicitud)
-        return ResponseEntity.status(HttpStatus.CREATED).body(Respuesta.de(emitido))
     }
 
     /** Las emisiones recientes de la comuna, para revocar una emitida por error (HU-07). */
@@ -85,9 +125,8 @@ class EmisionControlador(private val emision: EmisionDeCodigos, private val revo
         @PathVariable id: String,
         @RequestBody peticion: RevocacionPeticion,
     ): ResponseEntity<Map<String, String>> {
-        val autor = jwt.subject?.takeIf { it.isNotBlank() } ?: throw ComunaNoResuelta("el token no identifica a su usuario")
         val motivo = peticion.motivo ?: throw EmisionInvalida("indique el motivo de la revocación")
-        return when (revocacion.revocar(ResolutorDeComuna.desde(jwt), id, autor, motivo)) {
+        return when (revocacion.revocar(ResolutorDeComuna.desde(jwt), id, autor(jwt), motivo)) {
             RevocacionDeCodigos.Resultado.Revocada -> ResponseEntity.ok(mapOf("estado" to "revocada"))
             RevocacionDeCodigos.Resultado.NoEncontrada -> ResponseEntity.notFound().build()
             RevocacionDeCodigos.Resultado.YaRevocada ->

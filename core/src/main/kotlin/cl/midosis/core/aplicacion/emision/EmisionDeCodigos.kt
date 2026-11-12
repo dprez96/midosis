@@ -39,7 +39,14 @@ class EmisionDeCodigos(
 ) {
     private val aleatorio = SecureRandom()
 
-    fun emitir(comuna: CodigoComuna, autor: String, solicitud: SolicitudDeEmision, ahora: Instant = Instant.now()): CodigoEmitido {
+    /** [reemplazaA] es el jti del código que este corrige (HU-33): viaja en «rp» y la app sustituye ese tratamiento. */
+    fun emitir(
+        comuna: CodigoComuna,
+        autor: String,
+        solicitud: SolicitudDeEmision,
+        ahora: Instant = Instant.now(),
+        reemplazaA: String? = null,
+    ): CodigoEmitido {
         val productos = contexto.en(comuna) {
             solicitud.lineas.map { linea ->
                 val producto = catalogo.buscar(linea.gtin) ?: throw ProductoNoEncontrado()
@@ -74,6 +81,7 @@ class EmisionDeCodigos(
             emitidoEn = emitida,
             expiraEn = expira,
             productos = productos,
+            reemplazaA = reemplazaA,
         )
         // Lo que se firma tiene que poder leerse: se pasa por el mismo lector de la aplicación.
         try {
