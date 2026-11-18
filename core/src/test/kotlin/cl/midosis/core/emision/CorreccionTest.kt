@@ -42,6 +42,7 @@ class CorreccionTest : PruebaIntegracion() {
         contexto.en(providencia) {
             catalogo.guardar(Producto(providencia, Gtin.de("7802250012344"), "Losartán 50 mg", "Losartán potásico", "Comprimido", "50 mg"))
         }
+        plantillaDiaria("13123", "7802250012344")
     }
 
     private fun emitir(): String {

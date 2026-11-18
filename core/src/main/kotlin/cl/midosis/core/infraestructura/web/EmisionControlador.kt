@@ -12,6 +12,10 @@ import cl.midosis.core.dominio.emision.EmisionInvalida
 import cl.midosis.core.dominio.emision.EmisionNoDisponible
 import cl.midosis.core.dominio.emision.LineaDeEmision
 import cl.midosis.core.dominio.emision.SolicitudDeEmision
+import cl.midosis.core.dominio.emision.Validacion
+import cl.midosis.core.dominio.emision.ValidacionInvalida
+import cl.midosis.core.dominio.emision.ValidacionRequerida
+import cl.midosis.core.dominio.comuna.CodigoComuna
 import cl.midosis.core.dominio.posologia.Dosis
 import cl.midosis.core.dominio.posologia.PosologiaInvalida
 import cl.midosis.core.dominio.posologia.UnidadDeDosis
@@ -26,6 +30,8 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.jwt.Jwt
+import org.springframework.security.oauth2.jwt.JwtDecoder
+import org.springframework.security.oauth2.jwt.JwtException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -39,6 +45,7 @@ class EmisionControlador(
     private val emision: EmisionDeCodigos,
     private val revocacion: RevocacionDeCodigos,
     private val correccion: CorreccionDeCodigos,
+    private val decodificador: JwtDecoder,
 ) {
 
     data class LineaPeticion(
@@ -54,7 +61,14 @@ class EmisionControlador(
 
     data class ConsentimientoPeticion(val version: String?, val aceptadoEn: Instant?)
 
-    data class Peticion(val lineas: List<LineaPeticion>?, val consentimiento: ConsentimientoPeticion?)
+    /** El token de Firebase del químico farmacéutico que validó la posología en el mesón (HU-32). */
+    data class ValidacionPeticion(val token: String?)
+
+    data class Peticion(
+        val lineas: List<LineaPeticion>?,
+        val consentimiento: ConsentimientoPeticion?,
+        val validacion: ValidacionPeticion? = null,
+    )
 
     data class Respuesta(val id: String, val codigo: String, val codigoCorto: String, val pin: String, val expiraEn: Instant) {
         companion object {
@@ -64,7 +78,12 @@ class EmisionControlador(
 
     @PostMapping
     fun emitir(@AuthenticationPrincipal jwt: Jwt, @RequestBody peticion: Peticion): ResponseEntity<Respuesta> {
-        val emitido = emision.emitir(ResolutorDeComuna.desde(jwt), autor(jwt), solicitud(peticion.lineas, peticion.consentimiento))
+        val comuna = ResolutorDeComuna.desde(jwt)
+        val emitido = emision.emitir(
+            comuna, autor(jwt), solicitud(peticion.lineas, peticion.consentimiento),
+            autorEsQf = jwt.getClaimAsString(CLAIM_ROL) == ROL_QF,
+            validacion = peticion.validacion?.token?.let { validacion(it, comuna) },
+        )
         return ResponseEntity.status(HttpStatus.CREATED).body(Respuesta.de(emitido))
     }
 
@@ -105,6 +124,23 @@ class EmisionControlador(
     @GetMapping("/referencia/{referencia}")
     fun buscarPorReferencia(@AuthenticationPrincipal jwt: Jwt, @PathVariable referencia: String): List<CorreccionDeCodigos.Encontrada> =
         correccion.buscar(ResolutorDeComuna.desde(jwt), referencia)
+
+    /**
+     * La credencial del químico farmacéutico que valida (HU-32): un token de Firebase válido,
+     * con rol qf y de la misma comuna. Se verifica igual que el de la sesión, con las mismas
+     * claves; la web lo obtiene sin cerrar la sesión del auxiliar.
+     */
+    private fun validacion(token: String, comuna: CodigoComuna): Validacion {
+        val qf = try {
+            decodificador.decode(token)
+        } catch (e: JwtException) {
+            throw ValidacionInvalida("La credencial del químico farmacéutico no es válida. Vuelva a ingresarla.")
+        }
+        if (qf.getClaimAsString(CLAIM_ROL) != ROL_QF) throw ValidacionInvalida("Solo un químico farmacéutico puede validar la posología.")
+        val suya = runCatching { ResolutorDeComuna.desde(qf) }.getOrNull()
+        if (suya != comuna) throw ValidacionInvalida("El químico farmacéutico debe ser de esta comuna.")
+        return Validacion(autor(qf))
+    }
 
     private fun autor(jwt: Jwt): String =
         jwt.subject?.takeIf { it.isNotBlank() } ?: throw ComunaNoResuelta("el token no identifica a su usuario")
@@ -169,8 +205,28 @@ class EmisionControlador(
     fun posologia(e: PosologiaInvalida): ResponseEntity<Map<String, String>> =
         ResponseEntity.badRequest().body(mapOf("error" to (e.message ?: "posología inválida")))
 
+    /** La web muestra los motivos y pide la credencial del químico farmacéutico (HU-32). */
+    @ExceptionHandler(ValidacionRequerida::class)
+    fun validacionRequerida(e: ValidacionRequerida): ResponseEntity<Map<String, Any>> =
+        ResponseEntity.status(HttpStatus.CONFLICT).body(
+            mapOf(
+                "error" to "La posología necesita la validación de un químico farmacéutico.",
+                "codigo" to "validacion-requerida",
+                "motivos" to e.motivos,
+            ),
+        )
+
+    @ExceptionHandler(ValidacionInvalida::class)
+    fun validacionInvalida(e: ValidacionInvalida): ResponseEntity<Map<String, String>> =
+        ResponseEntity.status(HttpStatus.FORBIDDEN).body(mapOf("error" to (e.message ?: "validación inválida")))
+
     /** Sin claves no se emite: la web lo informa y la entrega del medicamento sigue igual. */
     @ExceptionHandler(EmisionNoDisponible::class)
     fun noDisponible(e: EmisionNoDisponible): ResponseEntity<Map<String, String>> =
         ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(mapOf("error" to "La emisión de códigos no está disponible en este momento."))
+
+    private companion object {
+        const val CLAIM_ROL = "rol"
+        const val ROL_QF = "qf"
+    }
 }

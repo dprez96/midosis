@@ -52,6 +52,7 @@ class EmisionTest : PruebaIntegracion() {
                 Producto(providencia, Gtin.de("7802250013303"), "Clonazepam 0,5 mg", "Clonazepam", "Comprimido", "0,5 mg", ControlLegal.PSICOTROPICO),
             )
         }
+        plantillaDiaria("13123", "7802250012344")
     }
 
     private fun peticion(
@@ -65,9 +66,9 @@ class EmisionTest : PruebaIntegracion() {
                      "indicaciones": "Con alimentos"}]}
     """.trimIndent()
 
-    private fun emitir(cuerpo: String, comuna: String = "13123") =
+    private fun emitir(cuerpo: String, comuna: String = "13123", rol: String = "auxiliar") =
         mvc.post("/api/emisiones") {
-            header("Authorization", "Bearer ${token(comuna)}")
+            header("Authorization", "Bearer ${token(comuna, rol = rol)}")
             contentType = MediaType.APPLICATION_JSON
             content = cuerpo
         }
@@ -85,8 +86,8 @@ class EmisionTest : PruebaIntegracion() {
         return LectorDeCodigos(ClavesDeConfianza(emisores, contenido, admiteClavesDePrueba = true)) { Instant.now().epochSecond }
     }
 
-    private fun respuesta(cuerpo: String): JsonNode {
-        val r = emitir(cuerpo).andExpect { status { isCreated() } }.andReturn()
+    private fun respuesta(cuerpo: String, rol: String = "auxiliar"): JsonNode {
+        val r = emitir(cuerpo, rol = rol).andExpect { status { isCreated() } }.andReturn()
         return json.readTree(r.response.contentAsString)
     }
 
@@ -122,7 +123,8 @@ class EmisionTest : PruebaIntegracion() {
 
     @Test
     fun `un producto con control legal conserva su nombre dentro del código`() {
-        val r = respuesta(peticion(gtin = "7802250013303"))
+        // Un psicotrópico exige la validación del químico farmacéutico: emite él (HU-32).
+        val r = respuesta(peticion(gtin = "7802250013303"), rol = "qf")
         val lectura = assertIs<Lectura.Aceptado>(lector().leer(r.get("codigo").asString()))
         assertEquals("Clonazepam 0,5 mg", lectura.carga.productos.single().etiqueta)
     }

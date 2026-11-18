@@ -104,5 +104,6 @@ export function sesionFalsa(perfil: Perfil | null): ServicioDeSesion {
     iniciar: async () => {},
     cerrar: async () => {},
     token: async () => 'token-de-prueba',
+    tokenDeValidacion: async () => 'token-del-qf',
   }
 }

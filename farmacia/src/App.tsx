@@ -34,7 +34,7 @@ export function App({ servicio, api }: Props) {
       <Encabezado perfil={perfil} cerrar={servicio.cerrar} />
       <main className="contenido">
         {perfil.comuna && perfil.rol ? (
-          <Secciones api={api} esQf={perfil.rol === 'qf'} />
+          <Secciones api={api} esQf={perfil.rol === 'qf'} validar={servicio.tokenDeValidacion} />
         ) : (
           <PerfilIncompleto />
         )}
@@ -51,7 +51,15 @@ type Seccion = 'meson' | 'emitidos' | 'correccion' | 'demanda'
  * con los productos corregidos. El mesón sigue montado mientras se revisa lo demás: volver a él no pierde la
  * atención en curso. Core vuelve a verificar el rol de cada consulta.
  */
-function Secciones({ api, esQf }: { api: ApiDelMeson; esQf: boolean }) {
+function Secciones({
+  api,
+  esQf,
+  validar,
+}: {
+  api: ApiDelMeson
+  esQf: boolean
+  validar: (correo: string, clave: string) => Promise<string>
+}) {
   const [seccion, setSeccion] = useState<Seccion>('meson')
   const [correccion, setCorreccion] = useState<CorreccionEnCurso | null>(null)
   return (
@@ -92,6 +100,7 @@ function Secciones({ api, esQf }: { api: ApiDelMeson; esQf: boolean }) {
           puedeGuardarPlantillas={esQf}
           correccion={correccion}
           alTerminarCorreccion={() => setCorreccion(null)}
+          validar={validar}
         />
       </div>
       {seccion === 'emitidos' && <CodigosEmitidos api={api} />}

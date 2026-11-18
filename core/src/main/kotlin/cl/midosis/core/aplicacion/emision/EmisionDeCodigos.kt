@@ -7,10 +7,15 @@ import cl.midosis.core.dominio.emision.CodigoEmitido
 import cl.midosis.core.dominio.emision.EmisionInvalida
 import cl.midosis.core.dominio.emision.EmisionNoDisponible
 import cl.midosis.core.dominio.emision.SolicitudDeEmision
+import cl.midosis.core.dominio.emision.ReglasDeValidacion
+import cl.midosis.core.dominio.emision.Validacion
+import cl.midosis.core.dominio.emision.ValidacionRequerida
+import cl.midosis.core.dominio.posologia.PlantillasDePosologia
 import cl.midosis.core.dominio.posologia.ProductoNoEncontrado
 import cl.midosis.core.infraestructura.claves.ProveedorDeClaves
 import cl.midosis.core.infraestructura.persistencia.ContextoComuna
 import cl.midosis.core.infraestructura.persistencia.EmisionesJdbc
+import cl.midosis.core.infraestructura.persistencia.ValidacionRegistrada
 import cl.midosis.credencial.Carga
 import cl.midosis.credencial.CodecDeCarga
 import cl.midosis.credencial.CodigoRechazado
@@ -36,20 +41,35 @@ class EmisionDeCodigos(
     private val emisiones: EmisionesJdbc,
     private val canje: CanjeDeCodigos,
     private val claves: ObjectProvider<ProveedorDeClaves>,
+    private val plantillas: PlantillasDePosologia,
 ) {
     private val aleatorio = SecureRandom()
 
-    /** [reemplazaA] es el jti del código que este corrige (HU-33): viaja en «rp» y la app sustituye ese tratamiento. */
+    /**
+     * [reemplazaA] es el jti del código que este corrige (HU-33): viaja en «rp» y la app sustituye
+     * ese tratamiento. Si la atención necesita la validación de un químico farmacéutico (HU-32)
+     * y quien emite no lo es, [validacion] dice quién la validó; sin ella no se emite.
+     */
     fun emitir(
         comuna: CodigoComuna,
         autor: String,
         solicitud: SolicitudDeEmision,
         ahora: Instant = Instant.now(),
         reemplazaA: String? = null,
+        autorEsQf: Boolean = false,
+        validacion: Validacion? = null,
     ): CodigoEmitido {
-        val productos = contexto.en(comuna) {
+        val (productos, motivos) = contexto.en(comuna) {
+            val delCatalogo = solicitud.lineas.associate { linea ->
+                linea.gtin.valor to (catalogo.buscar(linea.gtin) ?: throw ProductoNoEncontrado())
+            }
+            val motivos = ReglasDeValidacion.motivos(
+                solicitud.lineas,
+                delCatalogo,
+                solicitud.lineas.associate { it.gtin.valor to plantillas.listar(it.gtin) },
+            )
             solicitud.lineas.map { linea ->
-                val producto = catalogo.buscar(linea.gtin) ?: throw ProductoNoEncontrado()
+                val producto = delCatalogo.getValue(linea.gtin.valor)
                 val tomas = linea.tomasEntregadas
                 val intervalo = linea.frecuencia.toString()
                 Producto(
@@ -64,7 +84,13 @@ class EmisionDeCodigos(
                     via = linea.via,
                     nota = linea.indicaciones?.let { recortar(it, 240) },
                 )
-            }
+            } to motivos
+        }
+        // El químico farmacéutico que emite valida con su propia sesión.
+        val validadaPor = when {
+            motivos.isEmpty() -> null
+            autorEsQf -> autor
+            else -> validacion?.qf ?: throw ValidacionRequerida(motivos)
         }
 
         // Las claves se piden después de revisar la atención: un producto ajeno responde igual
@@ -95,6 +121,7 @@ class EmisionDeCodigos(
             emisiones.registrar(
                 carga, autor, firmante.kid, solicitud.consentimiento,
                 solicitud.lineas.groupBy { it.gtin.valor }.mapValues { (_, ls) -> ls.sumOf { it.unidadesEntregadas } },
+                validadaPor?.let { ValidacionRegistrada(it, ahora, motivos) },
             )
         }
         val registrado = canje.registrar(comuna, codigo, Instant.ofEpochSecond(expira), carga.id)

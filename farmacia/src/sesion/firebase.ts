@@ -1,6 +1,7 @@
-import { initializeApp } from '@firebase/app'
+import { deleteApp, initializeApp } from '@firebase/app'
 import {
   browserSessionPersistence,
+  inMemoryPersistence,
   initializeAuth,
   onIdTokenChanged,
   signInWithEmailAndPassword,
@@ -53,6 +54,20 @@ export function crearSesionFirebase(configuracion: ConfiguracionFirebase): Servi
     },
 
     cerrar: () => signOut(auth),
+
+    async tokenDeValidacion(correo, clave) {
+      // Una app aparte y en memoria: la sesión del auxiliar sigue intacta y la del químico
+      // farmacéutico no queda guardada en el navegador.
+      const app = initializeApp(configuracion, `validacion-${Date.now()}`)
+      try {
+        const credencial = await signInWithEmailAndPassword(initializeAuth(app, { persistence: inMemoryPersistence }), correo, clave)
+        return await credencial.user.getIdToken()
+      } catch (error) {
+        throw new Error(mensajeDeError(error), { cause: error })
+      } finally {
+        await deleteApp(app)
+      }
+    },
 
     async token() {
       const usuario = auth.currentUser

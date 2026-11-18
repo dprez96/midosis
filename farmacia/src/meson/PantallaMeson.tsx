@@ -24,6 +24,8 @@ interface Props {
   correccion?: CorreccionEnCurso | null
   /** Se llama al terminar la atención o al cancelar la corrección. */
   alTerminarCorreccion?: () => void
+  /** El token del químico farmacéutico que valida en el mesón (HU-32). */
+  validar?: (correo: string, clave: string) => Promise<string>
 }
 
 /**
@@ -36,6 +38,7 @@ export function PantallaMeson({
   hoy = fechaDeHoy,
   correccion = null,
   alTerminarCorreccion = () => {},
+  validar,
 }: Props) {
   const [atencion, despachar] = useReducer(reducirAtencion, ATENCION_NUEVA)
   const [busqueda, setBusqueda] = useState<{ codigoNoEncontrado: string | null } | null>(null)
@@ -240,6 +243,7 @@ export function PantallaMeson({
           key={numeroDeAtencion}
           api={api}
           correccion={correccion}
+          validar={validar}
           lineas={paraEmitir}
           retiro={hoy()}
           alTerminar={nuevaAtencion}
