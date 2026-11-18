@@ -23,7 +23,7 @@ dependencies {
     implementation("cl.midosis:motor")
     implementation("cl.midosis:credencial")
     // Firma con Cloud KMS en producción (ADR-016); la clave privada nunca sale de KMS.
-    implementation(platform("com.google.cloud:libraries-bom:26.91.0"))
+    implementation(platform("com.google.cloud:libraries-bom:26.93.0"))
     implementation("com.google.cloud:google-cloud-kms")
     // Conexión a Cloud SQL desde Cloud Run con la identidad de la cuenta de servicio, sin IP
     // autorizadas ni contraseñas de red. En el equipo y en las pruebas no se usa.
