@@ -11,6 +11,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import cl.midosis.paciente.R
+import cl.midosis.paciente.tratamiento.AlmacenDeTratamientos
 import cl.midosis.paciente.ui.PantallaDeToma
 import java.time.Instant
 
@@ -21,6 +22,9 @@ import java.time.Instant
  *
  * Si el paciente no contesta, el recordatorio se repite a los 10 y a los 25 minutos, y después
  * deja de insistir. Cada repetición revisa antes el historial: si ya contestó, no suena.
+ *
+ * Si el paciente activó la locución (HU-22), además lee en voz alta cada medicamento, su dosis
+ * y su indicación, sin conexión, con la voz del sistema.
  */
 class ReceptorDeAlarma : BroadcastReceiver() {
 
@@ -47,9 +51,27 @@ class ReceptorDeAlarma : BroadcastReceiver() {
             }
             // Cada alarma que suena hace avanzar la ventana de las que se entregan al sistema.
             programador.reprogramarGuardadas()
+            if (!deBanco) locutar(contexto, lineas)
         } else if (!HistorialDeTomas(contexto).cerrado(id, Instant.ofEpochSecond(programada / 1000))) {
             notificar(contexto, id, programada, lineas, conRespuesta = true)
+            locutar(contexto, lineas)
         }
+    }
+
+    /**
+     * Lee la toma en voz alta si el paciente lo pidió. La recepción queda abierta hasta que la
+     * voz termina, con un límite, para que el sistema no cierre el proceso a mitad de frase.
+     */
+    private fun locutar(contexto: Context, lineas: List<String>) {
+        if (lineas.isEmpty() || !Locutor.activada(contexto)) return
+        val indicaciones = try {
+            TextoDeLocucion.indicacionesDe(AlmacenDeTratamientos(contexto).leer())
+        } catch (e: Exception) {
+            // Sin poder leer los tratamientos, se lee igual el medicamento y la dosis.
+            emptyMap()
+        }
+        val pendiente = goAsync()
+        Locutor.hablar(contexto, TextoDeLocucion.armar(lineas, indicaciones)) { pendiente.finish() }
     }
 
     private fun notificar(contexto: Context, id: Int, programada: Long, lineas: List<String>, conRespuesta: Boolean) {
