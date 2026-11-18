@@ -86,4 +86,14 @@ class CorreccionesTest {
         almacen.quitar("B")
         assertEquals(mapOf("C" to EstadoDeCodigo.Revocado), almacen.leer())
     }
+
+    @Test
+    fun `las alarmas desactivadas por el paciente se recuerdan aunque core vuelva a decir suspender`() {
+        val almacen = AlmacenDeEstados(File(Files.createTempDirectory("estados").toFile(), "estados.txt"))
+        almacen.actualizar(mapOf("B" to EstadoDeCodigo.Corregido(suspender = true)))
+        assertEquals(EstadoDeCodigo.Corregido(suspender = true), almacen.leer()["B"])
+        almacen.marcarAlarmasDesactivadas("B")
+        almacen.actualizar(mapOf("B" to EstadoDeCodigo.Corregido(suspender = true)))
+        assertEquals(EstadoDeCodigo.Corregido(suspender = true, alarmasDesactivadas = true), almacen.leer()["B"])
+    }
 }

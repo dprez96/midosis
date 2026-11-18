@@ -13,8 +13,13 @@ import org.json.JSONObject
 sealed interface EstadoDeCodigo {
     data object Vigente : EstadoDeCodigo
 
-    /** El químico farmacéutico emitió un código de reemplazo y dijo qué hacer mientras tanto. */
-    data class Corregido(val suspender: Boolean) : EstadoDeCodigo
+    /**
+     * El químico farmacéutico emitió un código de reemplazo y dijo qué hacer mientras tanto. Con
+     * [suspender], [alarmasDesactivadas] dice si el paciente ya desactivó sus alarmas: la
+     * aplicación no lo hace sola, porque la respuesta de core no va firmada y una respuesta falsa
+     * no debe poder apagar un tratamiento.
+     */
+    data class Corregido(val suspender: Boolean, val alarmasDesactivadas: Boolean = false) : EstadoDeCodigo
 
     data object Revocado : EstadoDeCodigo
 

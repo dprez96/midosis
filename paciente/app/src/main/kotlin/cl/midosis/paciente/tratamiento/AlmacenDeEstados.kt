@@ -21,6 +21,7 @@ class AlmacenDeEstados(private val archivo: File) {
                 val estado = when (partes.getOrNull(1)) {
                     "continuar" -> EstadoDeCodigo.Corregido(suspender = false)
                     "suspender" -> EstadoDeCodigo.Corregido(suspender = true)
+                    "suspendido" -> EstadoDeCodigo.Corregido(suspender = true, alarmasDesactivadas = true)
                     "revocado" -> EstadoDeCodigo.Revocado
                     else -> null
                 }
@@ -28,14 +29,36 @@ class AlmacenDeEstados(private val archivo: File) {
             }.toMap()
         }
 
-    /** Reemplaza lo anotado de [consultados] con lo que respondió core. */
+    /**
+     * Reemplaza lo anotado de [consultados] con lo que respondió core. Si el paciente ya
+     * desactivó las alarmas de un código suspendido, eso se conserva.
+     */
     fun actualizar(consultados: Map<String, EstadoDeCodigo>) {
-        val todos = leer() + consultados
+        val antes = leer()
+        val todos = antes + consultados.mapValues { (id, nuevo) ->
+            val previo = antes[id]
+            if (previo is EstadoDeCodigo.Corregido && previo.alarmasDesactivadas && nuevo is EstadoDeCodigo.Corregido && nuevo.suspender) previo else nuevo
+        }
+        escribir(todos)
+    }
+
+    /** El paciente desactivó las alarmas del código suspendido [id]. */
+    fun marcarAlarmasDesactivadas(id: String) {
+        escribir(leer() + (id to EstadoDeCodigo.Corregido(suspender = true, alarmasDesactivadas = true)))
+    }
+
+    private fun escribir(todos: Map<String, EstadoDeCodigo>) {
         archivo.parentFile?.mkdirs()
         archivo.writeText(
             todos.mapNotNull { (id, e) ->
                 when (e) {
-                    is EstadoDeCodigo.Corregido -> "$id ${if (e.suspender) "suspender" else "continuar"}"
+                    is EstadoDeCodigo.Corregido -> "$id ${
+                        when {
+                            !e.suspender -> "continuar"
+                            e.alarmasDesactivadas -> "suspendido"
+                            else -> "suspender"
+                        }
+                    }"
                     EstadoDeCodigo.Revocado -> "$id revocado"
                     else -> null
                 }

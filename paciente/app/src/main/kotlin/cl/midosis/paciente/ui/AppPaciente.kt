@@ -103,13 +103,7 @@ fun AppPaciente() {
     LaunchedEffect(lista) {
         val ids = lista.map { it.carga.id }
         val consultados = withContext(Dispatchers.IO) { ClienteDeEstado(BuildConfig.URL_CORE).consultar(ids) } ?: return@LaunchedEffect
-        val antes = estadosGuardados.leer()
-        withContext(Dispatchers.IO) {
-            estadosGuardados.actualizar(consultados)
-            // «Suspender desde ya»: se quitan sus alarmas una sola vez, al enterarse.
-            lista.filter { consultados[it.carga.id] == EstadoDeCodigo.Corregido(suspender = true) && antes[it.carga.id] != consultados[it.carga.id] }
-                .forEach { programador.quitarTomas(Correcciones.esDe(it)) }
-        }
+        withContext(Dispatchers.IO) { estadosGuardados.actualizar(consultados) }
         estados = estadosGuardados.leer()
     }
 
@@ -178,6 +172,12 @@ fun AppPaciente() {
         Pantalla.Inicio -> Inicio(
             tratamientos = lista,
             estados = estados,
+            alDesactivarAlarmas = { t ->
+                // Lo confirma el paciente: la respuesta de core no va firmada (ver EstadoDeCodigo).
+                programador.quitarTomas(Correcciones.esDe(t))
+                estadosGuardados.marcarAlarmasDesactivadas(t.carga.id)
+                estados = estadosGuardados.leer()
+            },
             rutina = rutina,
             alCargar = { pantalla = Pantalla.Escanear },
             alAjustarRutina = { pantalla = Pantalla.Entrevistar(rutina?.let { Entrevista.desde(it.rutina) } ?: Entrevista()) },
@@ -269,6 +269,7 @@ fun AppPaciente() {
 private fun Inicio(
     tratamientos: List<TratamientoGuardado>,
     estados: Map<String, EstadoDeCodigo>,
+    alDesactivarAlarmas: (TratamientoGuardado) -> Unit,
     rutina: RutinaGuardada?,
     alCargar: () -> Unit,
     alAjustarRutina: () -> Unit,
@@ -285,7 +286,7 @@ private fun Inicio(
             val hoy = LocalDate.now()
             tratamientos.forEach { t ->
                 t.carga.productos.forEach { p -> TarjetaDeMedicamento(Resumen.de(p, t.carga.emitidoEn, hoy)) }
-                EstadoDelTratamiento(t, estados[t.carga.id])
+                EstadoDelTratamiento(t, estados[t.carga.id], alDesactivar = { alDesactivarAlarmas(t) })
             }
             ProximaToma(alRevisar = alRevisarPermisos)
             Text(LEYENDA, style = MaterialTheme.typography.bodySmall)
@@ -342,12 +343,14 @@ private fun TarjetaDeMedicamento(r: Resumen) {
  * que la farmacia haya dicho de él (HU-33).
  */
 @Composable
-private fun EstadoDelTratamiento(t: TratamientoGuardado, estado: EstadoDeCodigo?) {
+private fun EstadoDelTratamiento(t: TratamientoGuardado, estado: EstadoDeCodigo?, alDesactivar: () -> Unit) {
     val aviso = when (estado) {
-        is EstadoDeCodigo.Corregido -> "La farmacia corrigió este tratamiento." to if (estado.suspender) {
-            "Deja de tomarlo desde ya: sus alarmas se desactivaron. Pide en tu farmacia el código nuevo y cárgalo."
-        } else {
-            "Sigue tomándolo como hasta ahora hasta que cargues el código nuevo. Pídelo en tu farmacia."
+        is EstadoDeCodigo.Corregido -> "La farmacia corrigió este tratamiento." to when {
+            estado.suspender && estado.alarmasDesactivadas ->
+                "Deja de tomarlo desde ya: sus alarmas están desactivadas. Pide en tu farmacia el código nuevo y cárgalo."
+            estado.suspender -> "Deja de tomarlo desde ya. Pide en tu farmacia el código nuevo y cárgalo."
+            else ->
+                "Sigue tomándolo como hasta ahora hasta que cargues el código nuevo. Pídelo en tu farmacia."
         }
         EstadoDeCodigo.Revocado -> "La farmacia anuló este código." to
             "Consulta en tu farmacia antes de seguir con este tratamiento."
@@ -361,6 +364,11 @@ private fun EstadoDelTratamiento(t: TratamientoGuardado, estado: EstadoDeCodigo?
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(aviso.first, style = MaterialTheme.typography.titleMedium)
                 Text(aviso.second)
+                if (estado is EstadoDeCodigo.Corregido && estado.suspender && !estado.alarmasDesactivadas) {
+                    Button(onClick = alDesactivar, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                        Text("Desactivar sus alarmas")
+                    }
+                }
             }
         }
     }
