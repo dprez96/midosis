@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { ApiDeCorreccion, ApiDeEmision } from '../api/cliente'
+import { ValidacionRequerida, type ApiDeCorreccion, type ApiDeEmision } from '../api/cliente'
 import type { CorreccionEnCurso } from '../dominio/correccion'
 import { CONSENTIMIENTO, type CodigoEmitido, type LineaParaEmitir } from '../dominio/emision'
 import { intentosDelNavegador, type RegistroDeIntentos } from '../dominio/intentos'
@@ -17,6 +17,8 @@ interface Props {
   /** Dónde queda cada emisión fallida; por omisión, este navegador. */
   intentos?: RegistroDeIntentos
   alTerminar: () => void
+  /** El token del químico farmacéutico que valida en el mesón (HU-32). */
+  validar?: (correo: string, clave: string) => Promise<string>
 }
 
 type Paso =
@@ -26,6 +28,7 @@ type Paso =
   | { tipo: 'emitido'; emitido: CodigoEmitido }
   | { tipo: 'rechazado' }
   | { tipo: 'fallo'; mensaje: string }
+  | { tipo: 'validacion'; motivos: string[] }
 
 /**
  * Cierre de la atención: el consentimiento del paciente (HU-05) y la emisión del código con su
@@ -40,18 +43,26 @@ export function Emision({
   ahora = () => new Date(),
   intentos = intentosDelNavegador,
   alTerminar,
+  validar = async () => {
+    throw new Error('La validación no está disponible.')
+  },
 }: Props) {
   const [paso, setPaso] = useState<Paso>({ tipo: 'listo' })
 
-  async function emitir(aEmitir: LineaParaEmitir[]) {
+  async function emitir(aEmitir: LineaParaEmitir[], validacion?: string) {
     setPaso({ tipo: 'emitiendo' })
     try {
       const consentimiento = { version: CONSENTIMIENTO.version, aceptadoEn: ahora().toISOString() }
       const emitido = correccion
         ? await api.corregir(correccion.original, correccion.motivo, correccion.instruccion, aEmitir, consentimiento)
-        : await api.emitir(aEmitir, consentimiento)
+        : await api.emitir(aEmitir, consentimiento, validacion)
       setPaso({ tipo: 'emitido', emitido })
     } catch (error) {
+      // No es una falla: falta la validación del químico farmacéutico (HU-32).
+      if (error instanceof ValidacionRequerida) {
+        setPaso({ tipo: 'validacion', motivos: error.motivos })
+        return
+      }
       const mensaje = error instanceof Error ? error.message : 'No se pudo emitir el código.'
       intentos.anotar({
         en: ahora().toISOString(),
@@ -106,6 +117,15 @@ export function Emision({
 
       {paso.tipo === 'emitiendo' && <p className="secundario">Emitiendo el código…</p>}
 
+      {paso.tipo === 'validacion' && lineas && (
+        <ValidacionDelQf
+          motivos={paso.motivos}
+          validar={validar}
+          alValidar={(token) => void emitir(lineas, token)}
+          alCerrarSinCodigo={alTerminar}
+        />
+      )}
+
       {paso.tipo === 'rechazado' && (
         <>
           <p className="aviso aviso-info" role="status">
@@ -136,5 +156,82 @@ export function Emision({
         </>
       )}
     </section>
+  )
+}
+
+/**
+ * La validación farmacéutica en el mesón (HU-32): el químico farmacéutico revisa los motivos y
+ * escribe su correo y contraseña. La sesión de quien atiende sigue abierta; la del químico
+ * farmacéutico no queda guardada.
+ */
+function ValidacionDelQf({
+  motivos,
+  validar,
+  alValidar,
+  alCerrarSinCodigo,
+}: {
+  motivos: string[]
+  validar: (correo: string, clave: string) => Promise<string>
+  alValidar: (token: string) => void
+  alCerrarSinCodigo: () => void
+}) {
+  const [correo, setCorreo] = useState('')
+  const [clave, setClave] = useState('')
+  const [validando, setValidando] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function enviar() {
+    setValidando(true)
+    setError(null)
+    try {
+      const token = await validar(correo.trim(), clave)
+      setClave('')
+      alValidar(token)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo validar.')
+      setValidando(false)
+    }
+  }
+
+  return (
+    <form
+      className="consentimiento"
+      aria-labelledby="titulo-validacion"
+      onSubmit={(e) => {
+        e.preventDefault()
+        void enviar()
+      }}
+    >
+      <h3 id="titulo-validacion">Validación del químico farmacéutico</h3>
+      <p>Antes de emitir, un químico farmacéutico debe revisar la posología:</p>
+      <ul>
+        {motivos.map((m) => (
+          <li key={m}>{m}</li>
+        ))}
+      </ul>
+      <label htmlFor="correo-qf">Correo del químico farmacéutico</label>
+      <input id="correo-qf" type="email" autoComplete="off" value={correo} onChange={(e) => setCorreo(e.target.value)} />
+      <label htmlFor="clave-qf">Contraseña</label>
+      <input
+        id="clave-qf"
+        type="password"
+        autoComplete="off"
+        value={clave}
+        onChange={(e) => setClave(e.target.value)}
+      />
+      {error && (
+        <p className="aviso aviso-error" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="fila">
+        <button type="submit" className="primario" disabled={validando || !correo.trim() || !clave}>
+          {validando ? 'Validando…' : 'Validar y emitir'}
+        </button>
+        <button type="button" disabled={validando} onClick={alCerrarSinCodigo}>
+          Cerrar la atención sin código
+        </button>
+      </div>
+    </form>
   )
 }

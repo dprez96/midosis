@@ -70,6 +70,17 @@ abstract class PruebaIntegracion {
             administrador.execute("TRUNCATE correccion, emision, sobre, plantilla_posologia, producto, evento_seguridad")
         }
 
+        /**
+         * Una plantilla de 1 comprimido cada 24 horas para el producto: así un auxiliar puede
+         * emitir esa posología sin la validación de un químico farmacéutico (HU-32).
+         */
+        fun plantillaDiaria(comuna: String, gtin: String) {
+            administrador.update(
+                "INSERT INTO plantilla_posologia (comuna, gtin, cantidad, unidad, frecuencia, creada_por) VALUES (?, ?, 1, 'comprimido', 'PT24H', 'qf')",
+                comuna, gtin,
+            )
+        }
+
         /** Token firmado con el perfil indicado. Por defecto, un auxiliar de farmacia. */
         fun token(
             comuna: String?,

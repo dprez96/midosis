@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { ErrorDeApi, type ApiDeCorreccion, type ApiDeEmision } from '../api/cliente'
+import { ErrorDeApi, ValidacionRequerida, type ApiDeCorreccion, type ApiDeEmision } from '../api/cliente'
 import { CONSENTIMIENTO, peticionDeEmision, viaSugerida, type CodigoEmitido } from '../dominio/emision'
 import type { Plantilla } from '../dominio/posologia'
 import { catalogoFalso, clonazepam, losartan } from '../test/datos'
@@ -196,6 +196,58 @@ describe('Código de reemplazo (HU-33)', () => {
     expect(within(comprobante).getByText('YAA6-Y83C')).toBeInTheDocument()
     await usuario.click(within(comprobante).getByRole('button', { name: 'Nueva atención' }))
     expect(alTerminarCorreccion).toHaveBeenCalled()
+  })
+})
+
+describe('Validación del químico farmacéutico (HU-32)', () => {
+  it('si core la pide, muestra los motivos, valida con la credencial del QF y emite', async () => {
+    const usuario = userEvent.setup()
+    const api = catalogoFalso([losartan], { [losartan.gtin]: [unoDiario] })
+    const emitir = vi
+      .fn<ApiDeEmision['emitir']>()
+      .mockRejectedValueOnce(new ValidacionRequerida('Falta validar.', ['Losartán 50 mg: la posología no proviene de una plantilla.']))
+      .mockResolvedValueOnce(EMITIDO)
+    api.emitir = emitir
+    const validar = vi.fn(async () => 'token-del-qf')
+    render(<PantallaMeson api={api} puedeGuardarPlantillas={false} hoy={() => '2026-10-15'} validar={validar} />)
+
+    await registrarLinea(usuario, losartan.gtin, 'Losartán 50 mg')
+    await usuario.click(screen.getByRole('button', { name: 'Emitir código' }))
+    await usuario.click(screen.getByRole('button', { name: 'El paciente acepta' }))
+
+    const formulario = await screen.findByRole('form', { name: 'Validación del químico farmacéutico' })
+    expect(within(formulario).getByText('Losartán 50 mg: la posología no proviene de una plantilla.')).toBeInTheDocument()
+    const boton = within(formulario).getByRole('button', { name: 'Validar y emitir' })
+    expect(boton).toBeDisabled()
+    await usuario.type(within(formulario).getByLabelText('Correo del químico farmacéutico'), 'qf@farmacia.cl')
+    await usuario.type(within(formulario).getByLabelText('Contraseña'), 'clave-de-prueba')
+    await usuario.click(boton)
+
+    expect(validar).toHaveBeenCalledWith('qf@farmacia.cl', 'clave-de-prueba')
+    expect(emitir).toHaveBeenCalledTimes(2)
+    expect(emitir.mock.calls[1]![2]).toBe('token-del-qf')
+    expect(await screen.findByRole('region', { name: 'Comprobante de tratamiento · MiDosis' })).toBeInTheDocument()
+  })
+
+  it('una credencial rechazada se informa y deja intentar de nuevo', async () => {
+    const usuario = userEvent.setup()
+    const api = catalogoFalso([losartan], { [losartan.gtin]: [unoDiario] })
+    api.emitir = vi.fn<ApiDeEmision['emitir']>().mockRejectedValue(new ValidacionRequerida('Falta validar.', ['motivo']))
+    const validar = vi.fn(async () => {
+      throw new Error('Correo o contraseña incorrectos.')
+    })
+    render(<PantallaMeson api={api} puedeGuardarPlantillas={false} hoy={() => '2026-10-15'} validar={validar} />)
+
+    await registrarLinea(usuario, losartan.gtin, 'Losartán 50 mg')
+    await usuario.click(screen.getByRole('button', { name: 'Emitir código' }))
+    await usuario.click(screen.getByRole('button', { name: 'El paciente acepta' }))
+    const formulario = await screen.findByRole('form', { name: 'Validación del químico farmacéutico' })
+    await usuario.type(within(formulario).getByLabelText('Correo del químico farmacéutico'), 'qf@farmacia.cl')
+    await usuario.type(within(formulario).getByLabelText('Contraseña'), 'mala')
+    await usuario.click(within(formulario).getByRole('button', { name: 'Validar y emitir' }))
+
+    expect(await within(formulario).findByRole('alert')).toHaveTextContent('Correo o contraseña incorrectos.')
+    expect(within(formulario).getByRole('button', { name: 'Validar y emitir' })).toBeEnabled()
   })
 })
 

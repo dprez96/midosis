@@ -14,6 +14,17 @@ export class ErrorDeApi extends Error {
   }
 }
 
+/** Core pide la validación de un químico farmacéutico antes de emitir (HU-32). */
+export class ValidacionRequerida extends ErrorDeApi {
+  readonly motivos: string[]
+
+  constructor(mensaje: string, motivos: string[]) {
+    super(409, mensaje)
+    this.name = 'ValidacionRequerida'
+    this.motivos = motivos
+  }
+}
+
 export type ObtenerToken = () => Promise<string>
 
 export interface ApiDeCatalogo {
@@ -30,8 +41,12 @@ export interface ApiDePlantillas {
 }
 
 export interface ApiDeEmision {
-  /** Emite el código de la atención (HU-01). Core responde 503 si la emisión no está disponible. */
-  emitir(lineas: LineaParaEmitir[], consentimiento: Consentimiento): Promise<CodigoEmitido>
+  /**
+   * Emite el código de la atención (HU-01). Core responde 503 si la emisión no está disponible,
+   * y falla con [ValidacionRequerida] si la posología necesita la validación de un químico
+   * farmacéutico: se repite con [validacion], su token (HU-32).
+   */
+  emitir(lineas: LineaParaEmitir[], consentimiento: Consentimiento, validacion?: string): Promise<CodigoEmitido>
 }
 
 /** Una emisión de la comuna que todavía se puede canjear (HU-07). */
@@ -132,8 +147,11 @@ export function crearApi(obtenerToken: ObtenerToken, base = '/api'): ApiDelMeson
       throw new ErrorDeApi(0, 'No hay conexión con el servidor de MiDosis.')
     }
     if (!respuesta.ok) {
-      const cuerpo = (await respuesta.json().catch(() => null)) as { error?: unknown } | null
+      const cuerpo = (await respuesta.json().catch(() => null)) as { error?: unknown; codigo?: unknown; motivos?: unknown } | null
       const mensaje = typeof cuerpo?.error === 'string' ? cuerpo.error : mensajePorEstado(respuesta.status)
+      if (cuerpo?.codigo === 'validacion-requerida' && Array.isArray(cuerpo.motivos)) {
+        throw new ValidacionRequerida(mensaje, cuerpo.motivos.filter((m): m is string => typeof m === 'string'))
+      }
       throw new ErrorDeApi(respuesta.status, mensaje)
     }
     return (await respuesta.json()) as T
@@ -164,10 +182,13 @@ export function crearApi(obtenerToken: ObtenerToken, base = '/api'): ApiDelMeson
       })
     },
 
-    emitir(lineas, consentimiento) {
+    emitir(lineas, consentimiento, validacion) {
       return pedir<CodigoEmitido>('/emisiones', {
         method: 'POST',
-        body: JSON.stringify(peticionDeEmision(lineas, consentimiento)),
+        body: JSON.stringify({
+          ...peticionDeEmision(lineas, consentimiento),
+          ...(validacion ? { validacion: { token: validacion } } : {}),
+        }),
       })
     },
 

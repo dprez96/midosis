@@ -25,7 +25,14 @@ class EmisionesJdbc(private val jdbc: JdbcClient) {
      * compra, y con lo que se proyecta la demanda (HU-27). Las emisiones anteriores no las
      * guardaban; para ellas se usan las dosis entregadas.
      */
-    fun registrar(carga: Carga, autor: String, kid: String, consentimiento: Consentimiento, unidades: Map<String, BigDecimal> = emptyMap()) {
+    fun registrar(
+        carga: Carga,
+        autor: String,
+        kid: String,
+        consentimiento: Consentimiento,
+        unidades: Map<String, BigDecimal> = emptyMap(),
+        validacion: ValidacionRegistrada? = null,
+    ) {
         // Por producto, solo lo que sirve para auditar y proyectar la demanda: nada del paciente.
         val productos = json.writeValueAsString(
             carga.productos.map {
@@ -36,8 +43,10 @@ class EmisionesJdbc(private val jdbc: JdbcClient) {
         jdbc.sql(
             """
             INSERT INTO emision (id, comuna, punto, emitida_en, expira_en, emitida_por, kid,
-                                 consentimiento_version, consentimiento_en, productos)
-            VALUES (:id, :comuna, :punto, :emitida, :expira, :autor, :kid, :version, :aceptado, CAST(:productos AS jsonb))
+                                 consentimiento_version, consentimiento_en, productos,
+                                 validada_por, validada_en, motivos_validacion)
+            VALUES (:id, :comuna, :punto, :emitida, :expira, :autor, :kid, :version, :aceptado, CAST(:productos AS jsonb),
+                    :validadaPor, :validadaEn, CAST(:motivos AS jsonb))
             """.trimIndent(),
         )
             .param("id", carga.id)
@@ -50,6 +59,9 @@ class EmisionesJdbc(private val jdbc: JdbcClient) {
             .param("version", consentimiento.version)
             .param("aceptado", Timestamp.from(consentimiento.aceptadoEn))
             .param("productos", productos)
+            .param("validadaPor", validacion?.qf)
+            .param("validadaEn", validacion?.let { Timestamp.from(it.en) })
+            .param("motivos", validacion?.let { json.writeValueAsString(it.motivos) })
             .update()
     }
 
@@ -75,3 +87,6 @@ class EmisionesJdbc(private val jdbc: JdbcClient) {
             .list()
             .flatten()
 }
+
+/** Quién validó la posología de una emisión (HU-32), cuándo y por qué hizo falta. */
+data class ValidacionRegistrada(val qf: String, val en: Instant, val motivos: List<String>)

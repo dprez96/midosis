@@ -27,6 +27,11 @@ export interface ServicioDeSesion {
   cerrar(): Promise<void>
   /** Token vigente para llamar a core. */
   token(): Promise<string>
+  /**
+   * El token de otro usuario, para que un químico farmacéutico valide la posología en el mesón
+   * (HU-32) sin cerrar la sesión de quien atiende. Falla con un mensaje que se puede mostrar.
+   */
+  tokenDeValidacion(correo: string, clave: string): Promise<string>
 }
 
 export function esRol(valor: unknown): valor is Rol {

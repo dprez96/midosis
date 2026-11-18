@@ -74,7 +74,8 @@ class CorreccionDeCodigos(
         } ?: return Resultado.NoEncontrada
         if (existente > 0) return Resultado.YaCorregida
 
-        val reemplazo = emision.emitir(comuna, autor, solicitud, ahora, reemplazaA = original)
+        // Corrige solo el químico farmacéutico: su sesión valida la posología (HU-32).
+        val reemplazo = emision.emitir(comuna, autor, solicitud, ahora, reemplazaA = original, autorEsQf = true)
         return try {
             contexto.en(comuna) {
                 jdbc.sql(
