@@ -2,6 +2,7 @@ package cl.midosis.paciente.privacidad
 
 import android.content.Context
 import androidx.core.app.NotificationManagerCompat
+import cl.midosis.paciente.alarmas.AvisosDeRetiroEnElTelefono
 import cl.midosis.paciente.alarmas.ProgramadorDeAlarmas
 import cl.midosis.paciente.cripto.ClaveDelDispositivo
 
@@ -21,6 +22,8 @@ object Supresion {
     fun ejecutar(contexto: Context) {
         // Primero las alarmas, que se leen del plan guardado; después se borra todo.
         ProgramadorDeAlarmas(contexto).cancelarTodas()
+        // Los avisos de próximo retiro van aparte: sin esto seguirían llegando después de borrar.
+        AvisosDeRetiroEnElTelefono.cancelar(contexto)
         NotificationManagerCompat.from(contexto).cancelAll()
         listOf(contexto.noBackupFilesDir, contexto.filesDir, contexto.cacheDir).forEach { carpeta ->
             carpeta.listFiles()?.forEach { it.deleteRecursively() }
