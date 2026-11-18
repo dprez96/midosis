@@ -16,7 +16,6 @@ import cl.midosis.paciente.tratamiento.AvisosDeRetiro
 import cl.midosis.paciente.ui.PantallaPrincipal
 import java.io.File
 import java.time.LocalDateTime
-import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
@@ -57,7 +56,7 @@ object AvisosDeRetiroEnElTelefono {
         avisos.forEach { aviso ->
             val id = identificador(aviso.momento)
             val texto = aviso.productos.joinToString("\n") { "${it.etiqueta}: se acaba el ${it.seAgotaEl.format(FECHA)}" }
-            val cuando = aviso.momento.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            val cuando = PlanDeAlarmas.instante(aviso.momento)
             alarmas.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, cuando, intencion(contexto, id, texto))
         }
         archivo(contexto).writeText(avisos.joinToString("\n") { identificador(it.momento).toString() })

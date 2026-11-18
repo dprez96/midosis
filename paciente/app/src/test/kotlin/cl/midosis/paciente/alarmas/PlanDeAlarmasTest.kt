@@ -2,7 +2,9 @@ package cl.midosis.paciente.alarmas
 
 import cl.midosis.motor.planificacion.TomaProgramada
 import java.time.Duration
+import java.time.Instant
 import java.time.LocalDateTime
+import java.time.ZoneId
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -95,5 +97,36 @@ class PlanDeAlarmasTest {
         val ventana = ProgramadorDeAlarmas.dentroDeLaVentana(plan, ahora)
         assertEquals(7 * 48, ventana.size)
         assertTrue(ventana.size < 500)
+    }
+
+    private val santiago = ZoneId.of("America/Santiago")
+
+    @Test
+    fun `al cambiar de zona la toma conserva su hora en el reloj`() {
+        val toma = LocalDateTime.of(2026, 11, 20, 8, 0)
+        val enSantiago = PlanDeAlarmas.instante(toma, santiago)
+        val enLima = PlanDeAlarmas.instante(toma, ZoneId.of("America/Lima"))
+        // Las 08:00 de Lima son dos horas después que las 08:00 de Santiago en verano.
+        assertEquals(Duration.ofHours(2).toMillis(), enLima - enSantiago)
+        assertEquals(toma, LocalDateTime.ofInstant(Instant.ofEpochMilli(enLima), ZoneId.of("America/Lima")))
+    }
+
+    @Test
+    fun `con el horario de verano la toma diaria sigue a la misma hora`() {
+        // El próximo cambio de horario en Chile después del 1 de agosto de 2026.
+        val cambio = santiago.rules.nextTransition(Instant.parse("2026-08-01T00:00:00Z"))
+        val antes = cambio.dateTimeBefore.toLocalDate().minusDays(1).atTime(8, 0)
+        val despues = antes.plusDays(2)
+        val transcurrido = Duration.ofMillis(PlanDeAlarmas.instante(despues, santiago) - PlanDeAlarmas.instante(antes, santiago))
+        // Dos días de reloj, con una hora menos real: ambas suenan a las 08:00.
+        assertEquals(Duration.ofHours(48).minus(cambio.duration), transcurrido)
+    }
+
+    @Test
+    fun `una hora que el cambio de horario se salta suena una hora después`() {
+        val cambio = santiago.rules.nextTransition(Instant.parse("2026-08-01T00:00:00Z"))
+        val saltada = cambio.dateTimeBefore.plusMinutes(30)
+        val suena = LocalDateTime.ofInstant(Instant.ofEpochMilli(PlanDeAlarmas.instante(saltada, santiago)), santiago)
+        assertEquals(saltada.plus(cambio.duration), suena)
     }
 }

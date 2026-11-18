@@ -14,7 +14,6 @@ import cl.midosis.paciente.rutina.AlmacenDeRutina
 import cl.midosis.paciente.ui.PantallaPrincipal
 import java.io.File
 import java.time.LocalDateTime
-import java.time.ZoneId
 import java.time.ZoneOffset
 
 /**
@@ -53,7 +52,7 @@ object AvisosNocturnosEnElTelefono {
         avisos.forEach { aviso ->
             // El receptor es otro, así que el identificador no choca con el de una toma.
             val id = identificador(aviso.momento)
-            val cuando = aviso.momento.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            val cuando = PlanDeAlarmas.instante(aviso.momento)
             alarmas.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, cuando, intencion(contexto, id, AvisosNocturnos.frase(aviso.horas)))
         }
         archivo(contexto).writeText(avisos.joinToString("\n") { identificador(it.momento).toString() })
