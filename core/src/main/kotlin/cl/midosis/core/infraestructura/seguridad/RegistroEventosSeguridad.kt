@@ -40,4 +40,7 @@ class RegistroEventosSeguridad(
 enum class TipoEventoSeguridad {
     /** La petición indicaba una comuna distinta a la del token. */
     COMUNA_MANIPULADA,
+
+    /** El administrador comunal exportó los datos de la comuna (HU-29). */
+    EXPORTACION,
 }

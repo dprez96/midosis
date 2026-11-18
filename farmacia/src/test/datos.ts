@@ -83,6 +83,9 @@ export function catalogoFalso(
     async corregir() {
       throw new Error('este catálogo falso no corrige')
     },
+    async exportar() {
+      throw new Error('este catálogo falso no exporta')
+    },
     async demanda() {
       return { semanas: [], productos: [], supuesto: '', desviacion: [] }
     },
