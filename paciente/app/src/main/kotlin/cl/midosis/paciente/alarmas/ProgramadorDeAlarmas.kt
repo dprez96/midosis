@@ -7,7 +7,6 @@ import android.content.Intent
 import android.os.Build
 import cl.midosis.paciente.ui.PantallaPrincipal
 import java.time.LocalDateTime
-import java.time.ZoneId
 
 /**
  * Entrega las alarmas al sistema operativo con AlarmManager.setAlarmClock.
@@ -125,7 +124,7 @@ class ProgramadorDeAlarmas(
         if (!puedeProgramarExactas()) return emptyList()
         val entregadas = mutableListOf<SolicitudDeAlarma>()
         for (solicitud in plan) {
-            val cuando = solicitud.momento.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            val cuando = PlanDeAlarmas.instante(solicitud.momento)
             val info = AlarmManager.AlarmClockInfo(cuando, intencionDePantalla())
             try {
                 alarmas.setAlarmClock(info, intencionDeAlarma(solicitud.id, solicitud.lineas, cuando))
