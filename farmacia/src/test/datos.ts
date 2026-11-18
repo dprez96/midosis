@@ -77,6 +77,12 @@ export function catalogoFalso(
     async revocar() {
       throw new Error('este catálogo falso no revoca')
     },
+    async buscarPorReferencia() {
+      return []
+    },
+    async corregir() {
+      throw new Error('este catálogo falso no corrige')
+    },
     async demanda() {
       return { semanas: [], productos: [], supuesto: '', desviacion: [] }
     },

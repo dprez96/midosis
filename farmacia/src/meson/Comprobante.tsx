@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { nombreEnComprobante } from '../dominio/comprobante'
+import { referencia } from '../dominio/correccion'
 import type { CodigoEmitido, LineaParaEmitir } from '../dominio/emision'
 import { describirPosologia, UNIDADES } from '../dominio/posologia'
 import { calcularCobertura, fechaLegible } from '../dominio/tramo'
@@ -78,6 +79,10 @@ export function Comprobante({ emitido, lineas, retiro, alTerminar }: Props) {
           )
         })}
       </ol>
+      <p className="secundario">
+        Referencia del tratamiento: <strong className="codigo-corto">{referencia(emitido.id)}</strong>. Si hay que
+        corregirlo, la farmacia lo busca con ella.
+      </p>
       <p className="leyenda">Ante cualquier duda, consulte a su médico o químico farmacéutico.</p>
       <div className="fila no-imprimir">
         <button type="button" className="primario" onClick={() => window.print()}>

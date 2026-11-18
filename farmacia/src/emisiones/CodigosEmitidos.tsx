@@ -73,7 +73,8 @@ export function CodigosEmitidos({ api, intentos = intentosDelNavegador }: Props)
         </div>
         <p className="secundario">
           Revoque un código emitido por error mientras no venza. El código corto deja de funcionar. Si el paciente ya
-          escaneó el QR, el tratamiento quedó en su teléfono: corríjalo con un código nuevo.
+          escaneó el QR, el tratamiento quedó en su teléfono: el químico farmacéutico lo corrige en «Corregir un
+          tratamiento».
         </p>
         <p className="aviso aviso-exito estado" role="status">
           {aviso}

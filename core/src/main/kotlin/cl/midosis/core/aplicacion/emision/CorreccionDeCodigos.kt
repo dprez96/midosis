@@ -1,5 +1,7 @@
 package cl.midosis.core.aplicacion.emision
 
+import cl.midosis.core.dominio.catalogo.CatalogoDeProductos
+import cl.midosis.core.dominio.catalogo.Gtin
 import cl.midosis.core.dominio.comuna.CodigoComuna
 import cl.midosis.core.dominio.emision.CodigoEmitido
 import cl.midosis.core.dominio.emision.EmisionInvalida
@@ -11,6 +13,7 @@ import java.time.Instant
 import org.springframework.dao.DuplicateKeyException
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Service
+import tools.jackson.databind.json.JsonMapper
 
 /**
  * Corrección de un tratamiento ya cargado (HU-33, RN-25) y su consulta desde el teléfono
@@ -27,7 +30,10 @@ class CorreccionDeCodigos(
     private val consulta: ContextoConsulta,
     private val jdbc: JdbcClient,
     private val emision: EmisionDeCodigos,
+    private val catalogo: CatalogoDeProductos,
 ) {
+    private val json = JsonMapper.builder().build()
+
     /** Qué hace el paciente con el tratamiento anterior hasta cargar el reemplazo. */
     enum class Instruccion(val codigo: String) {
         CONTINUAR("continuar"),
@@ -93,6 +99,48 @@ class CorreccionDeCodigos(
         }
     }
 
+    /** Una emisión encontrada por su referencia, para que el químico farmacéutico la reconozca. */
+    data class Encontrada(
+        val id: String,
+        val emitidaEn: Instant,
+        val productos: List<String>,
+        val revocadaEn: Instant?,
+        /** El jti del código que ya la corrigió, si la corrigieron. */
+        val corregidaPor: String?,
+    )
+
+    /**
+     * Las emisiones de la comuna cuya referencia es [referencia]: los últimos 8 caracteres del
+     * jti, que van impresos en el comprobante y a la vista en la aplicación. Son 40 bits
+     * aleatorios del ULID: en una comuna casi nunca se repiten, y si se repiten se muestran todas
+     * con sus productos y su fecha para elegir. Sirve para corregir un tratamiento cuyo código
+     * ya venció, que no aparece entre las emisiones recientes.
+     */
+    fun buscar(comuna: CodigoComuna, referencia: String): List<Encontrada> {
+        val ref = normalizarReferencia(referencia) ?: throw EmisionInvalida("la referencia son 8 letras o números del comprobante")
+        return contexto.en(comuna) {
+            jdbc.sql(
+                """
+                SELECT e.id, e.emitida_en, e.revocada_en, e.productos, c.reemplazo
+                FROM emision e LEFT JOIN correccion c ON c.original = e.id
+                WHERE right(e.id, 8) = :ref ORDER BY e.emitida_en DESC LIMIT 10
+                """.trimIndent(),
+            )
+                .param("ref", ref)
+                .query { rs, _ ->
+                    Encontrada(
+                        id = rs.getString("id"),
+                        emitidaEn = rs.getTimestamp("emitida_en").toInstant(),
+                        productos = json.readTree(rs.getString("productos")).toList().map { it.get("gtin").asString() },
+                        revocadaEn = rs.getTimestamp("revocada_en")?.toInstant(),
+                        corregidaPor = rs.getString("reemplazo")?.trim(),
+                    )
+                }
+                .list()
+                .map { e -> e.copy(productos = e.productos.map { g -> catalogo.buscar(Gtin.de(g))?.nombre ?: g }) }
+        }
+    }
+
     /** Lo que la aplicación sabe de un código suyo. No dice nada del tratamiento ni de la comuna. */
     data class Estado(val id: String, val estado: String, val instruccion: String? = null)
 
@@ -126,6 +174,20 @@ class CorreccionDeCodigos(
 
     companion object {
         val ULID = Regex("^[0-9A-HJKMNP-TV-Z]{26}$")
+
+        /**
+         * La referencia escrita por una persona, en mayúsculas y sin guiones ni espacios. Como
+         * el alfabeto del ULID (Crockford), lee la I y la L como 1 y la O como 0. Null si no son
+         * 8 caracteres válidos.
+         */
+        fun normalizarReferencia(texto: String): String? =
+            texto.uppercase().filterNot { it == '-' || it.isWhitespace() }
+                .map { when (it) { 'I', 'L' -> '1'; 'O' -> '0'; else -> it } }
+                .joinToString("")
+                .takeIf { it.length == 8 && it.all { c -> c in ALFABETO } }
+
+        private const val ALFABETO = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
+
         const val MAXIMO_POR_CONSULTA = 20
     }
 }

@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
 import tools.jackson.databind.json.JsonMapper
 
@@ -126,5 +127,40 @@ class CorreccionTest : PruebaIntegracion() {
         estado(*Array(21) { "01M0000000000000000000000Z" }).andExpect { status { isBadRequest() } }
         mvc.post("/api/estado") { contentType = MediaType.APPLICATION_JSON; content = """{"ids": []}""" }
             .andExpect { status { isBadRequest() } }
+    }
+
+    private fun buscar(referencia: String, rol: String = "qf", comuna: String = "13123") =
+        mvc.get("/api/emisiones/referencia/$referencia") { header("Authorization", "Bearer ${token(comuna, rol = rol)}") }
+
+    @Test
+    fun `el químico farmacéutico encuentra por su referencia un código ya corregido`() {
+        val original = emitir()
+        val reemplazo = json.readTree(corregir(original).andReturn().response.contentAsString).get("id").asString()
+        // Como la escribiría una persona: en minúsculas, con guion y con una «o» por el cero.
+        val escrita = original.takeLast(8).lowercase().replace('0', 'o').let { it.take(4) + "-" + it.drop(4) }
+
+        buscar(escrita).andExpect {
+            status { isOk() }
+            jsonPath("$.length()") { value(1) }
+            jsonPath("$[0].id") { value(original) }
+            jsonPath("$[0].productos[0]") { value("Losartán 50 mg") }
+            jsonPath("$[0].corregidaPor") { value(reemplazo) }
+        }
+    }
+
+    @Test
+    fun `la búsqueda por referencia es solo del químico farmacéutico y de su comuna`() {
+        val original = emitir()
+        buscar(original.takeLast(8), rol = "auxiliar").andExpect { status { isForbidden() } }
+        buscar(original.takeLast(8), comuna = "13101").andExpect {
+            status { isOk() }
+            jsonPath("$.length()") { value(0) }
+        }
+    }
+
+    @Test
+    fun `una referencia mal escrita se rechaza`() {
+        buscar("ABC").andExpect { status { isBadRequest() } }
+        buscar("ABCDEFGU").andExpect { status { isBadRequest() } }
     }
 }

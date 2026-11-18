@@ -10,6 +10,7 @@ import { LectorDeCodigo } from './LectorDeCodigo'
 import { PosologiaDeLinea } from './PosologiaDeLinea'
 import { TramoDeLinea } from './TramoDeLinea'
 import { Emision } from './Emision'
+import type { CorreccionEnCurso } from '../dominio/correccion'
 import { VIAS, type CodigoVia, type LineaParaEmitir } from '../dominio/emision'
 import { hoy as fechaDeHoy, type Tramo } from '../dominio/tramo'
 
@@ -19,13 +20,23 @@ interface Props {
   puedeGuardarPlantillas: boolean
   /** La fecha del retiro, AAAA-MM-DD. Por omisión, la de hoy; las pruebas la fijan. */
   hoy?: () => string
+  /** La corrección en curso (HU-33): los productos de esta atención la reemplazan. */
+  correccion?: CorreccionEnCurso | null
+  /** Se llama al terminar la atención o al cancelar la corrección. */
+  alTerminarCorreccion?: () => void
 }
 
 /**
  * Atención en el mesón: identificar los productos que se entregan (HU-02), registrar su
  * posología (HU-03) y lo que se entrega en este retiro (HU-04).
  */
-export function PantallaMeson({ api, puedeGuardarPlantillas, hoy = fechaDeHoy }: Props) {
+export function PantallaMeson({
+  api,
+  puedeGuardarPlantillas,
+  hoy = fechaDeHoy,
+  correccion = null,
+  alTerminarCorreccion = () => {},
+}: Props) {
   const [atencion, despachar] = useReducer(reducirAtencion, ATENCION_NUEVA)
   const [busqueda, setBusqueda] = useState<{ codigoNoEncontrado: string | null } | null>(null)
   const [consultas, setConsultas] = useState(0)
@@ -58,6 +69,7 @@ export function PantallaMeson({ api, puedeGuardarPlantillas, hoy = fechaDeHoy }:
   }
 
   function nuevaAtencion() {
+    if (correccion) alTerminarCorreccion()
     despachar({ tipo: 'nueva' })
     setNumeroDeAtencion((n) => n + 1)
     volverAlLector()
@@ -115,6 +127,21 @@ export function PantallaMeson({ api, puedeGuardarPlantillas, hoy = fechaDeHoy }:
 
   return (
     <div className="meson">
+      {correccion && (
+        <section className="tarjeta aviso aviso-info" aria-labelledby="titulo-correccion-en-curso">
+          <h2 id="titulo-correccion-en-curso">Corrigiendo un tratamiento</h2>
+          <p>
+            Código original: {correccion.productos.join(', ')}. Motivo: {correccion.motivo}.
+          </p>
+          <p>
+            Registre los productos con la posología correcta y emita el código de reemplazo. Al cargarlo, el teléfono
+            del paciente reemplaza el tratamiento anterior.
+          </p>
+          <button type="button" onClick={alTerminarCorreccion}>
+            Cancelar la corrección
+          </button>
+        </section>
+      )}
       <section className="tarjeta" aria-label="Identificar producto">
         <LectorDeCodigo alLeer={leer} ref={lector} />
         <button type="button" className="enlace" onClick={() => setBusqueda({ codigoNoEncontrado: null })}>
@@ -212,6 +239,7 @@ export function PantallaMeson({ api, puedeGuardarPlantillas, hoy = fechaDeHoy }:
         <Emision
           key={numeroDeAtencion}
           api={api}
+          correccion={correccion}
           lineas={paraEmitir}
           retiro={hoy()}
           alTerminar={nuevaAtencion}

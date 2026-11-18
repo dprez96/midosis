@@ -35,6 +35,7 @@ class ConfiguracionSeguridad {
                 it.requestMatchers(HttpMethod.POST, RUTA_ESTADO).permitAll()
                 // Corregir un tratamiento ya cargado es una decisión clínica (HU-33, RN-25).
                 it.requestMatchers(HttpMethod.POST, "/api/emisiones/*/correccion").hasAuthority(AUTORIDAD_QF)
+                it.requestMatchers(HttpMethod.GET, "/api/emisiones/referencia/*").hasAuthority(AUTORIDAD_QF)
                 // Las plantillas son contenido clínico de la comuna: solo el químico
                 // farmacéutico las crea (HU-03). Consultarlas puede cualquier perfil.
                 it.requestMatchers(HttpMethod.POST, "/api/catalogo/productos/*/plantillas").hasAuthority(AUTORIDAD_QF)
