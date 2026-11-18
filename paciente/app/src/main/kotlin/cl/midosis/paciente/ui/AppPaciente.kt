@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -45,12 +46,15 @@ import cl.midosis.paciente.alarmas.AvisosDeRetiroEnElTelefono
 import cl.midosis.paciente.alarmas.Diagnostico
 import cl.midosis.paciente.alarmas.PlanDeAlarmas
 import cl.midosis.paciente.alarmas.ProgramadorDeAlarmas
+import cl.midosis.paciente.alarmas.AlmacenDelPlan
 import cl.midosis.paciente.tratamiento.Planificacion
 import cl.midosis.paciente.privacidad.Supresion
 import cl.midosis.paciente.tratamiento.RevisionDelPlan
 import cl.midosis.paciente.tratamiento.AlmacenDeEstados
 import cl.midosis.paciente.tratamiento.Correcciones
 import cl.midosis.paciente.tratamiento.EstadoDeCodigo
+import cl.midosis.paciente.tratamiento.Continuidad
+import cl.midosis.paciente.tratamiento.Continuacion
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.LocalDate
@@ -124,7 +128,16 @@ fun AppPaciente() {
 
     /** Propone el calendario y lo muestra para que el paciente lo revise antes de activarlo (HU-14). */
     fun revisarPlan(t: TratamientoGuardado, conRutina: RutinaGuardada) {
-        pantalla = Pantalla.Revisar(t, RevisionDelPlan(Planificacion.proponer(t, conRutina.rutina, LocalDateTime.now())))
+        val ahora = LocalDateTime.now()
+        // Un tramo siguiente con la misma posología sigue la cadencia del anterior (HU-21).
+        val plan = AlmacenDelPlan(contexto).leer()
+        val continuaDesde = Continuidad.detectar(t.carga, lista).mapNotNull { c ->
+            val linea = Correcciones.linea(c.productoAnterior.etiqueta, c.productoAnterior.dosis)
+            val esDe = Correcciones.esDe(c.anterior)
+            val ultima = plan.filter { s -> s.lineas.any { it == linea && esDe(it, s.momento) } }.maxOfOrNull { it.momento }
+            Continuidad.inicioDeTomas(c, ultima, ahora)?.let { c.producto.gtin to it }
+        }.toMap()
+        pantalla = Pantalla.Revisar(t, RevisionDelPlan(Planificacion.proponer(t, conRutina.rutina, ahora, continuaDesde)))
     }
 
     /**
@@ -150,6 +163,13 @@ fun AppPaciente() {
         }
         lista = tratamientos.leer()
         val ahora = LocalDateTime.now()
+        // Con otra posología, la nueva rige desde ahora: se quitan las tomas pendientes del tramo
+        // anterior de ese producto (HU-21). El historial de respuestas no se toca.
+        Continuidad.detectar(t.carga, lista.filterNot { it.carga.id == t.carga.id }).filterNot { it.mismaPosologia }.forEach { c ->
+            val linea = Correcciones.linea(c.productoAnterior.etiqueta, c.productoAnterior.dosis)
+            val esDe = Correcciones.esDe(c.anterior)
+            programador.quitarTomas({ texto, momento -> texto == linea && esDe(texto, momento) }, ahora)
+        }
         val tomas = Planificacion.tomasDe(t, revision.planes)
         val programadas = programador.programar(PlanDeAlarmas.construir(tomas, ahora), ahora)
         AvisosDeRetiroEnElTelefono.programar(contexto, ahora)
@@ -229,6 +249,7 @@ fun AppPaciente() {
         is Pantalla.Confirmar -> Confirmacion(
             carga = p.lectura.carga,
             reemplaza = lista.firstOrNull { it.carga.id == p.lectura.carga.reemplazaA },
+            continuaciones = Continuidad.detectar(p.lectura.carga, lista),
             alGuardar = {
                 val nuevo = TratamientoGuardado(p.lectura.carga, Instant.now().epochSecond, p.lectura.kid)
                 val conRutina = rutina
@@ -298,8 +319,15 @@ private fun Inicio(
             Text("No necesitas crear una cuenta ni dar tu nombre: todo queda en tu teléfono.")
         } else {
             val hoy = LocalDate.now()
-            tratamientos.forEach { t ->
-                t.carga.productos.forEach { p -> TarjetaDeMedicamento(Resumen.de(p, t.carga.emitidoEn, hoy)) }
+            // De cada medicamento, solo el último tramo cargado; los anteriores quedan guardados
+            // con su historial (HU-21).
+            Continuidad.vigentes(tratamientos).groupBy({ it.first }, { it.second }).forEach { (t, productos) ->
+                productos.forEach { p ->
+                    TarjetaDeMedicamento(
+                        Resumen.de(p, t.carga.emitidoEn, hoy, inicio = Continuidad.inicioDeCobertura(t, p, tratamientos)),
+                        tramo = Continuidad.numeroDeTramo(t, p, tratamientos),
+                    )
+                }
                 EstadoDelTratamiento(t, estados[t.carga.id], alDesactivar = { alDesactivarAlarmas(t) })
             }
             ProximaToma(alRevisar = alRevisarPermisos)
@@ -324,10 +352,11 @@ private fun Inicio(
  * hasta cuándo alcanza lo retirado. Nunca dice «terminado» mientras falte retirar (RN-07).
  */
 @Composable
-private fun TarjetaDeMedicamento(r: Resumen) {
+private fun TarjetaDeMedicamento(r: Resumen, tramo: Int = 1) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(r.etiqueta, style = MaterialTheme.typography.titleLarge)
+            if (tramo > 1) Text("Retiro número $tramo de este tratamiento", style = MaterialTheme.typography.bodyMedium)
             Text("Tratamiento indicado: ${dias(r.indicadoDias.toLong())}", style = MaterialTheme.typography.titleMedium)
             Text(
                 "Lo que retiraste alcanza hasta el ${r.alcanzaHasta.format(FECHA)} (${dias(r.cubiertoDias.toLong())})",
@@ -398,11 +427,50 @@ private val FECHA = DateTimeFormatter.ofPattern("dd-MM-yyyy")
 
 private fun dias(n: Long): String = if (n == 1L) "1 día" else "$n días"
 
+/**
+ * El código continúa un tratamiento que ya está en el teléfono (HU-21). Con la misma posología
+ * las tomas siguen donde quedaron; con otra, se muestran ambas y la nueva rige desde hoy.
+ */
+@Composable
+private fun AvisoDeContinuacion(c: Continuacion) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("Continúa tu tratamiento de ${c.producto.etiqueta}", style = MaterialTheme.typography.titleMedium)
+            if (c.mismaPosologia) {
+                Text("Las tomas siguen donde quedaron, sin repetir ni saltar ninguna. Tu historial se conserva.")
+            } else {
+                Text("La farmacia cambió cómo tomarlo. Desde hoy rige lo nuevo:")
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Antes", style = MaterialTheme.typography.labelLarge)
+                        Text("${c.productoAnterior.dosis}, ${describirIntervalo(c.productoAnterior.intervalo)}")
+                    }
+                    Column(Modifier.weight(1f)) {
+                        Text("Desde hoy", style = MaterialTheme.typography.labelLarge)
+                        Text("${c.producto.dosis}, ${describirIntervalo(c.producto.intervalo)}", style = MaterialTheme.typography.titleSmall)
+                    }
+                }
+                Text("Las tomas pendientes del retiro anterior se quitan. Tu historial se conserva.")
+            }
+        }
+    }
+}
+
 /** Lo que trae el código, para que el paciente lo revise antes de guardarlo. */
 @Composable
-private fun Confirmacion(carga: Carga, reemplaza: TratamientoGuardado?, alGuardar: () -> Unit, alCancelar: () -> Unit) {
+private fun Confirmacion(
+    carga: Carga,
+    reemplaza: TratamientoGuardado?,
+    continuaciones: List<Continuacion>,
+    alGuardar: () -> Unit,
+    alCancelar: () -> Unit,
+) {
     Marco("Revisa tu tratamiento") {
         Text("Entregado por la farmacia ${carga.emisor}.")
+        continuaciones.forEach { c -> AvisoDeContinuacion(c) }
         if (reemplaza != null) {
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),

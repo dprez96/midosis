@@ -84,8 +84,9 @@ class AvisosDeRetiroTest {
             ahora,
             zona,
         )
-        // El tramo nuevo se acaba el 28/12: se avisa el 23/12 y ya no el 26/11.
-        assertEquals(listOf(LocalDateTime.of(2026, 12, 23, 8, 0)), avisos.map { it.momento })
+        // Retiró el 28/11, antes de que el primero se acabara el 01/12: lo nuevo empieza a correr
+        // ahí (HU-21) y se acaba el 31/12. Se avisa el 26/12 y ya no el 26/11.
+        assertEquals(listOf(LocalDateTime.of(2026, 12, 26, 8, 0)), avisos.map { it.momento })
     }
 
     @Test
