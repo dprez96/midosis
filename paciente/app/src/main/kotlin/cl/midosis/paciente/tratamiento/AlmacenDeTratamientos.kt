@@ -41,6 +41,12 @@ class AlmacenDeTratamientos(private val archivo: ArchivoCifrado) {
         archivo.escribir(FormatoDeTratamientos.escribir(actuales + nuevo))
         return Resultado.Guardado
     }
+
+    /** Quita el tratamiento [id], por ejemplo al cargar su código de reemplazo (HU-33). */
+    fun quitar(id: String) = synchronized(this) {
+        val actuales = leer()
+        if (actuales.any { it.carga.id == id }) archivo.escribir(FormatoDeTratamientos.escribir(actuales.filterNot { it.carga.id == id }))
+    }
 }
 
 /**

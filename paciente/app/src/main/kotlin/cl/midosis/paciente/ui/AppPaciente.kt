@@ -15,11 +15,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.CardDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -31,6 +33,7 @@ import cl.midosis.paciente.BuildConfig
 import cl.midosis.paciente.codigo.ClavesEmpaquetadas
 import cl.midosis.paciente.codigo.CodigosDeEjemplo
 import cl.midosis.paciente.codigo.MensajeDeRechazo
+import cl.midosis.paciente.codigo.ClienteDeEstado
 import cl.midosis.paciente.rutina.AlmacenDeRutina
 import cl.midosis.paciente.rutina.Entrevista
 import cl.midosis.paciente.rutina.RutinaGuardada
@@ -44,10 +47,19 @@ import cl.midosis.paciente.alarmas.ProgramadorDeAlarmas
 import cl.midosis.paciente.tratamiento.Planificacion
 import cl.midosis.paciente.privacidad.Supresion
 import cl.midosis.paciente.tratamiento.RevisionDelPlan
+import cl.midosis.paciente.tratamiento.AlmacenDeEstados
+import cl.midosis.paciente.tratamiento.Correcciones
+import cl.midosis.paciente.tratamiento.EstadoDeCodigo
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /** Dónde está el paciente dentro de la aplicación. */
 private sealed interface Pantalla {
@@ -83,6 +95,23 @@ fun AppPaciente() {
     var pantalla by remember { mutableStateOf<Pantalla>(Pantalla.Inicio) }
     var porProgramar by remember { mutableStateOf<TratamientoGuardado?>(null) }
     val programador = remember { ProgramadorDeAlarmas(contexto) }
+    val estadosGuardados = remember { AlmacenDeEstados(contexto) }
+    var estados by remember { mutableStateOf(estadosGuardados.leer()) }
+
+    // Al abrir la aplicación y con cada tratamiento nuevo, pregunta a core si la farmacia corrigió
+    // o revocó alguno (HU-33). Sin conexión no pasa nada: queda lo último que se supo.
+    LaunchedEffect(lista) {
+        val ids = lista.map { it.carga.id }
+        val consultados = withContext(Dispatchers.IO) { ClienteDeEstado(BuildConfig.URL_CORE).consultar(ids) } ?: return@LaunchedEffect
+        val antes = estadosGuardados.leer()
+        withContext(Dispatchers.IO) {
+            estadosGuardados.actualizar(consultados)
+            // «Suspender desde ya»: se quitan sus alarmas una sola vez, al enterarse.
+            lista.filter { consultados[it.carga.id] == EstadoDeCodigo.Corregido(suspender = true) && antes[it.carga.id] != consultados[it.carga.id] }
+                .forEach { programador.quitarTomas(Correcciones.esDe(it)) }
+        }
+        estados = estadosGuardados.leer()
+    }
 
 
     fun leerCodigo(texto: String) {
@@ -105,9 +134,18 @@ fun AppPaciente() {
      * estarlo (CU-P-03).
      */
     fun programarAlarmas(t: TratamientoGuardado, revision: RevisionDelPlan) {
+        val reemplazado = lista.firstOrNull { it.carga.id == t.carga.reemplazaA }
         if (tratamientos.guardar(t) == AlmacenDeTratamientos.Resultado.YaCargado) {
             pantalla = Pantalla.YaCargado
             return
+        }
+        // Un código de reemplazo (HU-33) sustituye al tratamiento que corrige: se quitan sus
+        // alarmas antes de programar las nuevas, que pueden tener el mismo texto.
+        if (reemplazado != null) {
+            programador.quitarTomas(Correcciones.esDe(reemplazado))
+            tratamientos.quitar(reemplazado.carga.id)
+            estadosGuardados.quitar(reemplazado.carga.id)
+            estados = estadosGuardados.leer()
         }
         lista = tratamientos.leer()
         val ahora = LocalDateTime.now()
@@ -139,6 +177,7 @@ fun AppPaciente() {
     when (val p = pantalla) {
         Pantalla.Inicio -> Inicio(
             tratamientos = lista,
+            estados = estados,
             rutina = rutina,
             alCargar = { pantalla = Pantalla.Escanear },
             alAjustarRutina = { pantalla = Pantalla.Entrevistar(rutina?.let { Entrevista.desde(it.rutina) } ?: Entrevista()) },
@@ -176,6 +215,7 @@ fun AppPaciente() {
         }
         is Pantalla.Confirmar -> Confirmacion(
             carga = p.lectura.carga,
+            reemplaza = lista.firstOrNull { it.carga.id == p.lectura.carga.reemplazaA },
             alGuardar = {
                 val nuevo = TratamientoGuardado(p.lectura.carga, Instant.now().epochSecond, p.lectura.kid)
                 val conRutina = rutina
@@ -228,6 +268,7 @@ fun AppPaciente() {
 @Composable
 private fun Inicio(
     tratamientos: List<TratamientoGuardado>,
+    estados: Map<String, EstadoDeCodigo>,
     rutina: RutinaGuardada?,
     alCargar: () -> Unit,
     alAjustarRutina: () -> Unit,
@@ -244,6 +285,7 @@ private fun Inicio(
             val hoy = LocalDate.now()
             tratamientos.forEach { t ->
                 t.carga.productos.forEach { p -> TarjetaDeMedicamento(Resumen.de(p, t.carga.emitidoEn, hoy)) }
+                EstadoDelTratamiento(t, estados[t.carga.id])
             }
             ProximaToma(alRevisar = alRevisarPermisos)
             Text(LEYENDA, style = MaterialTheme.typography.bodySmall)
@@ -295,15 +337,64 @@ private fun TarjetaDeMedicamento(r: Resumen) {
     }
 }
 
+/**
+ * La referencia del tratamiento, que el paciente le dicta a la farmacia para corregirlo, y lo
+ * que la farmacia haya dicho de él (HU-33).
+ */
+@Composable
+private fun EstadoDelTratamiento(t: TratamientoGuardado, estado: EstadoDeCodigo?) {
+    val aviso = when (estado) {
+        is EstadoDeCodigo.Corregido -> "La farmacia corrigió este tratamiento." to if (estado.suspender) {
+            "Deja de tomarlo desde ya: sus alarmas se desactivaron. Pide en tu farmacia el código nuevo y cárgalo."
+        } else {
+            "Sigue tomándolo como hasta ahora hasta que cargues el código nuevo. Pídelo en tu farmacia."
+        }
+        EstadoDeCodigo.Revocado -> "La farmacia anuló este código." to
+            "Consulta en tu farmacia antes de seguir con este tratamiento."
+        else -> null
+    }
+    if (aviso != null) {
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+            modifier = Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite },
+        ) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(aviso.first, style = MaterialTheme.typography.titleMedium)
+                Text(aviso.second)
+            }
+        }
+    }
+    Text(
+        "Referencia: ${Correcciones.referencia(t.carga.id)}",
+        style = MaterialTheme.typography.bodySmall,
+        modifier = Modifier.semantics { contentDescription = "Referencia del tratamiento: ${Correcciones.referencia(t.carga.id).toList().joinToString(" ")}" },
+    )
+}
+
 private val FECHA = DateTimeFormatter.ofPattern("dd-MM-yyyy")
 
 private fun dias(n: Long): String = if (n == 1L) "1 día" else "$n días"
 
 /** Lo que trae el código, para que el paciente lo revise antes de guardarlo. */
 @Composable
-private fun Confirmacion(carga: Carga, alGuardar: () -> Unit, alCancelar: () -> Unit) {
+private fun Confirmacion(carga: Carga, reemplaza: TratamientoGuardado?, alGuardar: () -> Unit, alCancelar: () -> Unit) {
     Marco("Revisa tu tratamiento") {
         Text("Entregado por la farmacia ${carga.emisor}.")
+        if (reemplaza != null) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Este código corrige un tratamiento tuyo", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "Reemplaza a ${reemplaza.carga.productos.joinToString(", ") { it.etiqueta }} " +
+                            "(referencia ${Correcciones.referencia(reemplaza.carga.id)}). Al guardarlo se quitan sus " +
+                            "alarmas y quedan las de este.",
+                    )
+                }
+            }
+        }
         carga.productos.forEach { p ->
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {

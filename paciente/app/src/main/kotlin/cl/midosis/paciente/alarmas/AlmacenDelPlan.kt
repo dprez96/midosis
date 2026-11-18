@@ -45,6 +45,27 @@ class AlmacenDelPlan(
         guardar(porId.values.filter { it.momento.isAfter(ahora) }.sortedBy { it.momento })
     }
 
+    /**
+     * Quita del plan las líneas que cumplen [esDe] (texto y momento de la alarma). Devuelve las
+     * alarmas que quedaron sin ninguna línea, para cancelarlas, y las que perdieron alguna, para
+     * volver a entregarlas con su texto nuevo.
+     */
+    fun quitar(esDe: (String, LocalDateTime) -> Boolean, ahora: LocalDateTime): Pair<List<SolicitudDeAlarma>, List<SolicitudDeAlarma>> =
+        synchronized(BLOQUEO) {
+            val vacias = mutableListOf<SolicitudDeAlarma>()
+            val cambiadas = mutableListOf<SolicitudDeAlarma>()
+            val nuevo = leer().mapNotNull { s ->
+                val quedan = s.lineas.filterNot { esDe(it, s.momento) }
+                when {
+                    quedan.size == s.lineas.size -> s
+                    quedan.isEmpty() -> { vacias += s; null }
+                    else -> s.copy(lineas = quedan).also { cambiadas += it }
+                }
+            }
+            guardar(nuevo.filter { it.momento.isAfter(ahora) })
+            vacias to cambiadas
+        }
+
     fun vaciar() = synchronized(BLOQUEO) { archivo.delete() }
 
     private fun guardar(plan: List<SolicitudDeAlarma>) {

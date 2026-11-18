@@ -56,6 +56,21 @@ class ProgramadorDeAlarmas(
         return entregar(dentroDeLaVentana(guardadas, ahora)).size
     }
 
+    /**
+     * Quita las tomas que cumplen [esDe], de un tratamiento corregido o reemplazado (HU-33). Las
+     * alarmas que se quedan sin tomas se cancelan; las que comparten minuto con otro medicamento
+     * se vuelven a entregar sin la línea quitada.
+     */
+    fun quitarTomas(esDe: (String, LocalDateTime) -> Boolean, ahora: LocalDateTime = LocalDateTime.now()) {
+        val (vacias, cambiadas) = almacen.quitar(esDe, ahora)
+        for (s in vacias) {
+            alarmas.cancel(intencionDeAlarma(s.id, emptyList(), 0))
+            cancelarRecordatorios(s.id)
+        }
+        entregar(dentroDeLaVentana(cambiadas, ahora))
+        AvisosNocturnosEnElTelefono.programar(contexto, almacen.leer(), ahora)
+    }
+
     /** Cancela todas las alarmas que esta aplicación dejó programadas. */
     fun cancelarTodas() {
         for (solicitud in almacen.leer()) {
