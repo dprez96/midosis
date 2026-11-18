@@ -28,6 +28,7 @@ import cl.midosis.credencial.Carga
 import cl.midosis.credencial.Lectura
 import cl.midosis.motor.rutina.Rutina
 import cl.midosis.paciente.BuildConfig
+import cl.midosis.paciente.aviso.AlmacenDeAviso
 import cl.midosis.paciente.codigo.ClavesEmpaquetadas
 import cl.midosis.paciente.codigo.CodigosDeEjemplo
 import cl.midosis.paciente.codigo.MensajeDeRechazo
@@ -61,6 +62,9 @@ private sealed interface Pantalla {
     data object Pruebas : Pantalla
     data object Permisos : Pantalla
     data object Privacidad : Pantalla
+
+    /** El aviso de uso y responsabilidad: [primeraVez] solo se cierra con «Entiendo, continuar». */
+    data class Aviso(val primeraVez: Boolean) : Pantalla
     data object Voz : Pantalla
     data object Borrado : Pantalla
     data class Revisar(val tratamiento: TratamientoGuardado, val revision: RevisionDelPlan) : Pantalla
@@ -80,7 +84,10 @@ fun AppPaciente() {
 
     var lista by remember { mutableStateOf(tratamientos.leer()) }
     var rutina by remember { mutableStateOf(rutinas.leer()) }
-    var pantalla by remember { mutableStateOf<Pantalla>(Pantalla.Inicio) }
+    val avisos = remember { AlmacenDeAviso(contexto) }
+    var pantalla by remember {
+        mutableStateOf<Pantalla>(if (avisos.debeMostrarse()) Pantalla.Aviso(primeraVez = true) else Pantalla.Inicio)
+    }
     var porProgramar by remember { mutableStateOf<TratamientoGuardado?>(null) }
     val programador = remember { ProgramadorDeAlarmas(contexto) }
 
@@ -128,7 +135,8 @@ fun AppPaciente() {
         if (pendiente != null) revisarPlan(pendiente, guardada) else pantalla = Pantalla.Inicio
     }
 
-    BackHandler(enabled = pantalla != Pantalla.Inicio) {
+    // En el aviso de la primera vez, «Atrás» cierra la aplicación: no se entra sin leerlo.
+    BackHandler(enabled = pantalla != Pantalla.Inicio && pantalla != Pantalla.Aviso(primeraVez = true)) {
         // Salir de la revisión no deja el tratamiento sin alarmas: se activan las propuestas.
         when (val p = pantalla) {
             is Pantalla.Revisar -> programarAlarmas(p.tratamiento, p.revision)
@@ -146,6 +154,11 @@ fun AppPaciente() {
             alRevisarPermisos = { pantalla = Pantalla.Permisos },
             alAbrirPrivacidad = { pantalla = Pantalla.Privacidad },
             alAbrirVoz = { pantalla = Pantalla.Voz },
+            alAbrirAviso = { pantalla = Pantalla.Aviso(primeraVez = false) },
+        )
+        is Pantalla.Aviso -> PantallaDeAviso(
+            alEntender = if (p.primeraVez) ({ avisos.registrarLectura(); pantalla = Pantalla.Inicio }) else null,
+            alVolver = if (p.primeraVez) null else ({ pantalla = Pantalla.Inicio }),
         )
         Pantalla.Privacidad -> Privacidad(
             alBorrar = {
@@ -235,6 +248,7 @@ private fun Inicio(
     alRevisarPermisos: () -> Unit,
     alAbrirPrivacidad: () -> Unit,
     alAbrirVoz: () -> Unit,
+    alAbrirAviso: () -> Unit,
 ) {
     Marco("MiDosis") {
         if (tratamientos.isEmpty()) {
@@ -257,6 +271,7 @@ private fun Inicio(
         }
         TextButton(onClick = alAbrirVoz) { Text("Lectura en voz alta") }
         TextButton(onClick = alAbrirPrivacidad) { Text("Privacidad y mis datos") }
+        TextButton(onClick = alAbrirAviso) { Text("Uso, cuándo consultar y responsabilidad") }
         if (BuildConfig.DEBUG) TextButton(onClick = alAbrirPruebas) { Text("Herramientas de prueba") }
     }
 }
