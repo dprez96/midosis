@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { ErrorDeApi, type ApiDeEmision } from '../api/cliente'
+import { ErrorDeApi, type ApiDeCorreccion, type ApiDeEmision } from '../api/cliente'
 import { CONSENTIMIENTO, peticionDeEmision, viaSugerida, type CodigoEmitido } from '../dominio/emision'
 import type { Plantilla } from '../dominio/posologia'
 import { catalogoFalso, clonazepam, losartan } from '../test/datos'
@@ -162,3 +162,40 @@ describe('datos de la emisión', () => {
     })
   })
 })
+
+describe('Código de reemplazo (HU-33)', () => {
+  it('con una corrección en curso, emite el reemplazo del original y lo dice en pantalla', async () => {
+    const usuario = userEvent.setup()
+    const api = catalogoFalso([losartan], { [losartan.gtin]: [unoDiario] })
+    const emitir = vi.fn<ApiDeEmision['emitir']>()
+    const corregir = vi.fn<ApiDeCorreccion['corregir']>(async () => EMITIDO)
+    api.emitir = emitir
+    api.corregir = corregir
+    const alTerminarCorreccion = vi.fn()
+    render(
+      <PantallaMeson
+        api={api}
+        puedeGuardarPlantillas
+        hoy={() => '2026-10-15'}
+        correccion={{ original: '01M0000000000000000000000A', productos: ['Losartán 50 mg'], motivo: 'Dosis mal transcrita', instruccion: 'suspender' }}
+        alTerminarCorreccion={alTerminarCorreccion}
+      />,
+    )
+    expect(screen.getByRole('heading', { name: 'Corrigiendo un tratamiento' })).toBeInTheDocument()
+    expect(screen.getByText(/Motivo: Dosis mal transcrita/)).toBeInTheDocument()
+
+    await registrarLinea(usuario, losartan.gtin, 'Losartán 50 mg')
+    await usuario.click(screen.getByRole('button', { name: 'Emitir código de reemplazo' }))
+    await usuario.click(screen.getByRole('button', { name: 'El paciente acepta' }))
+
+    expect(emitir).not.toHaveBeenCalled()
+    const [original, motivo, instruccion] = corregir.mock.calls[0]!
+    expect([original, motivo, instruccion]).toEqual(['01M0000000000000000000000A', 'Dosis mal transcrita', 'suspender'])
+
+    const comprobante = await screen.findByRole('region', { name: 'Comprobante de tratamiento · MiDosis' })
+    expect(within(comprobante).getByText('YAA6-Y83C')).toBeInTheDocument()
+    await usuario.click(within(comprobante).getByRole('button', { name: 'Nueva atención' }))
+    expect(alTerminarCorreccion).toHaveBeenCalled()
+  })
+})
+

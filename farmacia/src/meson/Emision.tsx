@@ -1,11 +1,14 @@
 import { useState } from 'react'
-import type { ApiDeEmision } from '../api/cliente'
+import type { ApiDeCorreccion, ApiDeEmision } from '../api/cliente'
+import type { CorreccionEnCurso } from '../dominio/correccion'
 import { CONSENTIMIENTO, type CodigoEmitido, type LineaParaEmitir } from '../dominio/emision'
 import { intentosDelNavegador, type RegistroDeIntentos } from '../dominio/intentos'
 import { Comprobante } from './Comprobante'
 
 interface Props {
-  api: ApiDeEmision
+  api: ApiDeEmision & ApiDeCorreccion
+  /** Si se está corrigiendo un tratamiento (HU-33), se emite el código de reemplazo. */
+  correccion?: CorreccionEnCurso | null
   /** Null mientras falte registrar la posología o la entrega de algún producto. */
   lineas: LineaParaEmitir[] | null
   retiro: string
@@ -31,6 +34,7 @@ type Paso =
  */
 export function Emision({
   api,
+  correccion = null,
   lineas,
   retiro,
   ahora = () => new Date(),
@@ -42,10 +46,10 @@ export function Emision({
   async function emitir(aEmitir: LineaParaEmitir[]) {
     setPaso({ tipo: 'emitiendo' })
     try {
-      const emitido = await api.emitir(aEmitir, {
-        version: CONSENTIMIENTO.version,
-        aceptadoEn: ahora().toISOString(),
-      })
+      const consentimiento = { version: CONSENTIMIENTO.version, aceptadoEn: ahora().toISOString() }
+      const emitido = correccion
+        ? await api.corregir(correccion.original, correccion.motivo, correccion.instruccion, aEmitir, consentimiento)
+        : await api.emitir(aEmitir, consentimiento)
       setPaso({ tipo: 'emitido', emitido })
     } catch (error) {
       const mensaje = error instanceof Error ? error.message : 'No se pudo emitir el código.'
@@ -64,7 +68,7 @@ export function Emision({
 
   return (
     <section className="tarjeta" aria-labelledby="titulo-emision">
-      <h2 id="titulo-emision">Código de tratamiento</h2>
+      <h2 id="titulo-emision">{correccion ? 'Código de reemplazo' : 'Código de tratamiento'}</h2>
 
       {paso.tipo === 'listo' && (
         <>
@@ -77,7 +81,7 @@ export function Emision({
             disabled={lineas === null}
             onClick={() => setPaso({ tipo: 'consentimiento' })}
           >
-            Emitir código
+            {correccion ? 'Emitir código de reemplazo' : 'Emitir código'}
           </button>
         </>
       )}

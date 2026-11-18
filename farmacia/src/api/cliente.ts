@@ -1,5 +1,6 @@
 import type { Producto } from '../dominio/catalogo'
 import { peticionDeEmision, type CodigoEmitido, type Consentimiento, type LineaParaEmitir } from '../dominio/emision'
+import type { Instruccion } from '../dominio/correccion'
 import type { Plantilla, Posologia } from '../dominio/posologia'
 
 /** Error de una llamada a core, con un mensaje que se puede mostrar en el mesón. */
@@ -50,6 +51,32 @@ export interface ApiDeRevocacion {
   revocar(id: string, motivo: string): Promise<void>
 }
 
+/** Una emisión encontrada por su referencia (HU-33), también si ya venció. */
+export interface EmisionEncontrada {
+  id: string
+  emitidaEn: string
+  productos: string[]
+  revocadaEn: string | null
+  /** El jti del código de reemplazo, si ya se corrigió. */
+  corregidaPor: string | null
+}
+
+export interface ApiDeCorreccion {
+  /** Solo el químico farmacéutico; core responde 400 si la referencia no son 8 caracteres válidos. */
+  buscarPorReferencia(referencia: string): Promise<EmisionEncontrada[]>
+  /**
+   * Emite el código de reemplazo del [original]. Core responde 409 si ya se había corregido y
+   * 404 si no existe en la comuna.
+   */
+  corregir(
+    original: string,
+    motivo: string,
+    instruccion: Instruccion,
+    lineas: LineaParaEmitir[],
+    consentimiento: Consentimiento,
+  ): Promise<CodigoEmitido>
+}
+
 /** La demanda proyectada de la comuna (HU-27), tal como la entrega core. */
 export interface DemandaProyectada {
   /** El lunes de cada semana, AAAA-MM-DD. */
@@ -64,7 +91,12 @@ export interface ApiDeDemanda {
   demanda(): Promise<DemandaProyectada>
 }
 
-export type ApiDelMeson = ApiDeCatalogo & ApiDePlantillas & ApiDeEmision & ApiDeRevocacion & ApiDeDemanda
+export type ApiDelMeson = ApiDeCatalogo &
+  ApiDePlantillas &
+  ApiDeEmision &
+  ApiDeRevocacion &
+  ApiDeDemanda &
+  ApiDeCorreccion
 
 const MENSAJES_POR_ESTADO: Record<number, string> = {
   401: 'La sesión expiró. Vuelva a iniciar sesión.',
@@ -141,6 +173,17 @@ export function crearApi(obtenerToken: ObtenerToken, base = '/api'): ApiDelMeson
 
     recientes() {
       return pedir<EmisionReciente[]>('/emisiones/recientes')
+    },
+
+    buscarPorReferencia(ref) {
+      return pedir<EmisionEncontrada[]>(`/emisiones/referencia/${encodeURIComponent(ref)}`)
+    },
+
+    corregir(original, motivo, instruccion, lineas, consentimiento) {
+      return pedir<CodigoEmitido>(`/emisiones/${encodeURIComponent(original)}/correccion`, {
+        method: 'POST',
+        body: JSON.stringify({ ...peticionDeEmision(lineas, consentimiento), motivo, instruccion }),
+      })
     },
 
     demanda() {

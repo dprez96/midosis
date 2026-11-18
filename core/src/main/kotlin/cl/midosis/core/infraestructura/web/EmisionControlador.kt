@@ -98,6 +98,14 @@ class EmisionControlador(
         }
     }
 
+    /**
+     * Busca una emisión por la referencia del comprobante o de la aplicación (HU-33), también
+     * las ya vencidas. Solo el químico farmacéutico, que es quien corrige.
+     */
+    @GetMapping("/referencia/{referencia}")
+    fun buscarPorReferencia(@AuthenticationPrincipal jwt: Jwt, @PathVariable referencia: String): List<CorreccionDeCodigos.Encontrada> =
+        correccion.buscar(ResolutorDeComuna.desde(jwt), referencia)
+
     private fun autor(jwt: Jwt): String =
         jwt.subject?.takeIf { it.isNotBlank() } ?: throw ComunaNoResuelta("el token no identifica a su usuario")
 

@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import type { ApiDelMeson } from './api/cliente'
 import { CodigosEmitidos } from './emisiones/CodigosEmitidos'
+import { Correccion } from './emisiones/Correccion'
+import type { CorreccionEnCurso } from './dominio/correccion'
 import { Demanda } from './demanda/Demanda'
 import { PantallaMeson } from './meson/PantallaMeson'
 import { PantallaIngreso } from './sesion/PantallaIngreso'
@@ -41,15 +43,17 @@ export function App({ servicio, api }: Props) {
   )
 }
 
-type Seccion = 'meson' | 'emitidos' | 'demanda'
+type Seccion = 'meson' | 'emitidos' | 'correccion' | 'demanda'
 
 /**
- * El mesón, los códigos emitidos y, para el químico farmacéutico, la demanda proyectada
- * (HU-27). El mesón sigue montado mientras se revisa lo demás: volver a él no pierde la
+ * El mesón, los códigos emitidos y, para el químico farmacéutico, la corrección de un
+ * tratamiento (HU-33) y la demanda proyectada (HU-27). La corrección se completa en el mesón,
+ * con los productos corregidos. El mesón sigue montado mientras se revisa lo demás: volver a él no pierde la
  * atención en curso. Core vuelve a verificar el rol de cada consulta.
  */
 function Secciones({ api, esQf }: { api: ApiDelMeson; esQf: boolean }) {
   const [seccion, setSeccion] = useState<Seccion>('meson')
+  const [correccion, setCorreccion] = useState<CorreccionEnCurso | null>(null)
   return (
     <>
       <nav className="secciones" aria-label="Secciones">
@@ -66,6 +70,15 @@ function Secciones({ api, esQf }: { api: ApiDelMeson; esQf: boolean }) {
         {esQf && (
           <button
             type="button"
+            aria-current={seccion === 'correccion' ? 'page' : undefined}
+            onClick={() => setSeccion('correccion')}
+          >
+            Corregir un tratamiento
+          </button>
+        )}
+        {esQf && (
+          <button
+            type="button"
             aria-current={seccion === 'demanda' ? 'page' : undefined}
             onClick={() => setSeccion('demanda')}
           >
@@ -74,9 +87,23 @@ function Secciones({ api, esQf }: { api: ApiDelMeson; esQf: boolean }) {
         )}
       </nav>
       <div hidden={seccion !== 'meson'}>
-        <PantallaMeson api={api} puedeGuardarPlantillas={esQf} />
+        <PantallaMeson
+          api={api}
+          puedeGuardarPlantillas={esQf}
+          correccion={correccion}
+          alTerminarCorreccion={() => setCorreccion(null)}
+        />
       </div>
       {seccion === 'emitidos' && <CodigosEmitidos api={api} />}
+      {seccion === 'correccion' && esQf && (
+        <Correccion
+          api={api}
+          alIniciar={(c) => {
+            setCorreccion(c)
+            setSeccion('meson')
+          }}
+        />
+      )}
       {seccion === 'demanda' && esQf && <Demanda api={api} />}
     </>
   )
