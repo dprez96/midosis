@@ -3,7 +3,6 @@ package cl.midosis.paciente.tratamiento
 import cl.midosis.motor.posologia.Frecuencia
 import cl.midosis.motor.posologia.TramoDispensado
 import cl.midosis.motor.rutina.Rutina
-import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -34,20 +33,15 @@ object AvisosDeRetiro {
         ahora: LocalDateTime,
         zona: ZoneId = ZoneId.systemDefault(),
     ): List<AvisoDeRetiro> {
-        // El último tramo cargado de cada producto es el que manda.
-        val vigentes = tratamientos
-            .flatMap { t -> t.carga.productos.map { p -> Triple(p, t.carga.emitidoEn, t.cargadoEn) } }
-            .groupBy { (p, _, _) -> p.gtin }
-            .values
-            .map { tramos -> tramos.maxBy { (_, _, cargadoEn) -> cargadoEn } }
-
-        return vigentes
-            .mapNotNull { (p, emitidoEn, _) ->
+        // El último tramo cargado de cada producto es el que manda, y su cobertura empieza donde
+        // termina la del tramo anterior si lo continúa con la misma posología (HU-21).
+        return Continuidad.vigentes(tratamientos)
+            .mapNotNull { (t, p) ->
                 val tramo = TramoDispensado(p.duracionIndicadaDias, p.dosisEntregadas, Frecuencia.de(p.intervalo))
-                val retiro = Instant.ofEpochSecond(emitidoEn).atZone(zona).toLocalDate()
-                val dia = tramo.avisoDeProximoRetiro(retiro) ?: return@mapNotNull null
+                val inicio = Continuidad.inicioDeCobertura(t, p, tratamientos, zona)
+                val dia = tramo.avisoDeProximoRetiro(inicio) ?: return@mapNotNull null
                 val momento = dia.atTime(rutina.desayuno)
-                if (!momento.isAfter(ahora)) null else momento to ProductoPorAcabarse(p.etiqueta, tramo.seAgotaEl(retiro))
+                if (!momento.isAfter(ahora)) null else momento to ProductoPorAcabarse(p.etiqueta, tramo.seAgotaEl(inicio))
             }
             .groupBy({ it.first }, { it.second })
             .map { (momento, productos) -> AvisoDeRetiro(momento, productos.sortedBy { it.etiqueta }) }

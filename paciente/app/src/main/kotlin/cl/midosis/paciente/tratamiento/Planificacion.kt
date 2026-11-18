@@ -19,11 +19,23 @@ data class PlanDeProducto(val etiqueta: String, val dosis: String, val plan: Pla
 object Planificacion {
 
     /** El plan que propone el motor, un calendario por medicamento. */
-    fun proponer(tratamiento: TratamientoGuardado, rutina: Rutina, desde: LocalDateTime): List<PlanDeProducto> {
+    /**
+     * [continuaDesde] trae, por GTIN, la hora de la primera toma de un producto que continúa el
+     * tramo anterior con la misma posología (HU-21): las tomas siguen esa cadencia y no se vuelve
+     * a correr la fase.
+     */
+    fun proponer(
+        tratamiento: TratamientoGuardado,
+        rutina: Rutina,
+        desde: LocalDateTime,
+        continuaDesde: Map<String, LocalDateTime> = emptyMap(),
+    ): List<PlanDeProducto> {
         val planificador = PlanificadorDeTomas(rutina)
         return tratamiento.carga.productos.mapNotNull { p ->
             val frecuencia = Frecuencia.de(p.intervalo)
-            val momentos = planificador.planificar(frecuencia, p.dosisEntregadas, restricciones(p.observaciones), desde)
+            val momentos = continuaDesde[p.gtin]
+                ?.let { primera -> (0 until p.dosisEntregadas).map { primera.plus(frecuencia.intervalo.multipliedBy(it.toLong())) } }
+                ?: planificador.planificar(frecuencia, p.dosisEntregadas, restricciones(p.observaciones), desde)
             if (momentos.isEmpty()) null else PlanDeProducto(p.etiqueta, p.dosis, PlanEditable(momentos, frecuencia.intervalo))
         }
     }

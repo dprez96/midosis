@@ -40,14 +40,24 @@ data class Resumen(
     }
 
     companion object {
-        fun de(producto: Producto, emitidoEn: Long, hoy: LocalDate, zona: ZoneId = ZoneId.systemDefault()): Resumen {
+        /**
+         * [inicio] es cuándo empieza a correr lo retirado: el día del retiro, o el día en que se
+         * agota el tramo anterior si este lo continúa (HU-21, [Continuidad.inicioDeCobertura]).
+         */
+        fun de(
+            producto: Producto,
+            emitidoEn: Long,
+            hoy: LocalDate,
+            zona: ZoneId = ZoneId.systemDefault(),
+            inicio: LocalDate? = null,
+        ): Resumen {
             val tramo = TramoDispensado(
                 duracionIndicadaDias = producto.duracionIndicadaDias,
                 dosisEntregadas = producto.dosisEntregadas,
                 frecuencia = Frecuencia.de(producto.intervalo),
             )
             // El retiro es el día en que la farmacia emitió el código, en la hora del teléfono.
-            val retiro = Instant.ofEpochSecond(emitidoEn).atZone(zona).toLocalDate()
+            val retiro = inicio ?: Instant.ofEpochSecond(emitidoEn).atZone(zona).toLocalDate()
             val hasta = tramo.seAgotaEl(retiro)
             val aviso = tramo.avisoDeProximoRetiro(retiro)
             val estado = when {
