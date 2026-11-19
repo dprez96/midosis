@@ -38,9 +38,10 @@ class ProgramadorDeAlarmas(
     fun programar(plan: List<SolicitudDeAlarma>, ahora: LocalDateTime = LocalDateTime.now()): Int {
         // Se guarda todo: lo que no se entrega ahora se entrega cuando la ventana avance o
         // cuando el paciente conceda el permiso que falta.
-        almacen.agregar(plan, ahora)
+        // Se entregan como quedaron guardadas: con las líneas de otro tratamiento a la misma hora.
+        val guardadas = almacen.agregar(plan, ahora)
         AvisosNocturnosEnElTelefono.programar(contexto, almacen.leer(), ahora)
-        return entregar(dentroDeLaVentana(plan, ahora)).size
+        return entregar(dentroDeLaVentana(guardadas, ahora)).size
     }
 
     /**
@@ -60,8 +61,8 @@ class ProgramadorDeAlarmas(
      * alarmas que se quedan sin tomas se cancelan; las que comparten minuto con otro medicamento
      * se vuelven a entregar sin la línea quitada.
      */
-    fun quitarTomas(esDe: (String, LocalDateTime) -> Boolean, ahora: LocalDateTime = LocalDateTime.now()) {
-        val (vacias, cambiadas) = almacen.quitar(esDe, ahora)
+    fun quitarTomas(esDe: (String, LocalDateTime) -> Boolean, ahora: LocalDateTime = LocalDateTime.now(), perfil: String? = null) {
+        val (vacias, cambiadas) = almacen.quitar(esDe, ahora, perfil)
         for (s in vacias) {
             alarmas.cancel(intencionDeAlarma(s.id, emptyList(), 0))
             cancelarRecordatorios(s.id)
@@ -85,11 +86,11 @@ class ProgramadorDeAlarmas(
      * aviso pospuesto (HU-16). No entra al plan guardado: si el teléfono se reinicia en esos
      * minutos, el recordatorio se pierde, pero el aviso original ya sonó.
      */
-    fun programarRecordatorio(id: Int, lineas: List<String>, programadaMs: Long, cuandoMs: Long, intento: Int) {
+    fun programarRecordatorio(id: Int, lineas: List<String>, programadaMs: Long, cuandoMs: Long, intento: Int, perfil: String = "") {
         if (!puedeProgramarExactas()) return
         val info = AlarmManager.AlarmClockInfo(cuandoMs, intencionDePantalla())
         try {
-            alarmas.setAlarmClock(info, intencionDeRecordatorio(id, lineas, programadaMs, intento))
+            alarmas.setAlarmClock(info, intencionDeRecordatorio(id, lineas, programadaMs, intento, perfil))
         } catch (e: SecurityException) {
             // El paciente revocó el permiso: el aviso original ya sonó.
         }
@@ -127,7 +128,7 @@ class ProgramadorDeAlarmas(
             val cuando = PlanDeAlarmas.instante(solicitud.momento)
             val info = AlarmManager.AlarmClockInfo(cuando, intencionDePantalla())
             try {
-                alarmas.setAlarmClock(info, intencionDeAlarma(solicitud.id, solicitud.lineas, cuando))
+                alarmas.setAlarmClock(info, intencionDeAlarma(solicitud.id, solicitud.lineas, cuando, solicitud.perfil))
                 entregadas.add(solicitud)
             } catch (e: SecurityException) {
                 // El paciente revocó el permiso entre la verificación y la programación.
@@ -146,19 +147,20 @@ class ProgramadorDeAlarmas(
      * Android identifica la alarma por el código y el destino, no por los datos extra: la
      * misma alarma se reemplaza o se cancela con cualquier contenido.
      */
-    private fun intencionDeAlarma(id: Int, lineas: List<String>, cuando: Long): PendingIntent =
+    private fun intencionDeAlarma(id: Int, lineas: List<String>, cuando: Long, perfil: String = ""): PendingIntent =
         PendingIntent.getBroadcast(
             contexto,
             id,
             Intent(contexto, ReceptorDeAlarma::class.java)
                 .putExtra(ReceptorDeAlarma.EXTRA_ID, id)
                 .putExtra(ReceptorDeAlarma.EXTRA_PROGRAMADA, cuando)
-                .putExtra(ReceptorDeAlarma.EXTRA_LINEAS, lineas.toTypedArray()),
+                .putExtra(ReceptorDeAlarma.EXTRA_LINEAS, lineas.toTypedArray())
+                .putExtra(ReceptorDeAlarma.EXTRA_PERFIL, perfil),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
     /** Cada intento tiene su propia acción: Android los distingue y se cancelan por separado. */
-    private fun intencionDeRecordatorio(id: Int, lineas: List<String>, programadaMs: Long, intento: Int): PendingIntent =
+    private fun intencionDeRecordatorio(id: Int, lineas: List<String>, programadaMs: Long, intento: Int, perfil: String = ""): PendingIntent =
         PendingIntent.getBroadcast(
             contexto,
             id,
@@ -167,7 +169,8 @@ class ProgramadorDeAlarmas(
                 .putExtra(ReceptorDeAlarma.EXTRA_ID, id)
                 .putExtra(ReceptorDeAlarma.EXTRA_PROGRAMADA, programadaMs)
                 .putExtra(ReceptorDeAlarma.EXTRA_LINEAS, lineas.toTypedArray())
-                .putExtra(ReceptorDeAlarma.EXTRA_INTENTO, intento),
+                .putExtra(ReceptorDeAlarma.EXTRA_INTENTO, intento)
+                .putExtra(ReceptorDeAlarma.EXTRA_PERFIL, perfil),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 

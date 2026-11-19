@@ -10,7 +10,13 @@ import java.util.Base64
  * Un tratamiento cargado en este teléfono: la carga ya verificada, cuándo se cargó y la
  * clave de la farmacia que lo firmó. Vive solo aquí (ADR-008): MiDosis no tiene una copia.
  */
-data class TratamientoGuardado(val carga: Carga, val cargadoEn: Long, val kid: String)
+data class TratamientoGuardado(
+    val carga: Carga,
+    val cargadoEn: Long,
+    val kid: String,
+    /** El perfil del paciente al que pertenece (HU-31). Vacío: el perfil principal. */
+    val perfil: String = "",
+)
 
 /**
  * Los tratamientos del teléfono, cifrados con la clave del almacén de Android. No guarda nada
@@ -50,24 +56,28 @@ class AlmacenDeTratamientos(private val archivo: ArchivoCifrado) {
 }
 
 /**
- * Una línea por tratamiento: la carga en CBOR (Base64), cuándo se cargó y el kid. La carga se
+ * Una línea por tratamiento: la carga en CBOR (Base64), cuándo se cargó, el kid y, si no es el
+ * principal, el perfil. La carga se
  * guarda tal como el contrato la define y se vuelve a validar al leerla.
  */
 object FormatoDeTratamientos {
     fun escribir(tratamientos: List<TratamientoGuardado>): String =
         tratamientos.joinToString("\n") { t ->
-            listOf(Base64.getEncoder().encodeToString(CodecDeCarga.codificar(t.carga)), t.cargadoEn.toString(), t.kid)
+            (listOf(Base64.getEncoder().encodeToString(CodecDeCarga.codificar(t.carga)), t.cargadoEn.toString(), t.kid) +
+                listOfNotNull(t.perfil.ifEmpty { null }))
                 .joinToString(" ")
         }
 
     fun leer(texto: String): List<TratamientoGuardado> =
         texto.lines().filter { it.isNotBlank() }.map { linea ->
             val partes = linea.split(" ")
-            require(partes.size == 3) { "tratamiento guardado con ${partes.size} campos" }
+            // Sin cuarto campo: guardado antes de los perfiles, es del principal.
+            require(partes.size == 3 || partes.size == 4) { "tratamiento guardado con ${partes.size} campos" }
             TratamientoGuardado(
                 carga = CodecDeCarga.leer(Base64.getDecoder().decode(partes[0])),
                 cargadoEn = partes[1].toLong(),
                 kid = partes[2],
+                perfil = partes.getOrElse(3) { "" },
             )
         }
 }

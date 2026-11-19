@@ -24,6 +24,8 @@ import androidx.compose.ui.unit.dp
 import cl.midosis.paciente.alarmas.ReceptorDeAlarma
 import cl.midosis.paciente.alarmas.ReceptorDeRespuesta
 import cl.midosis.paciente.alarmas.Respuesta
+import cl.midosis.paciente.perfiles.AlmacenDePerfiles
+import cl.midosis.paciente.perfiles.Perfil
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -43,12 +45,14 @@ class PantallaDeToma : ComponentActivity() {
         val id = intent.getIntExtra(ReceptorDeAlarma.EXTRA_ID, 0)
         val programada = intent.getLongExtra(ReceptorDeAlarma.EXTRA_PROGRAMADA, 0)
         val lineas = intent.getStringArrayExtra(ReceptorDeAlarma.EXTRA_LINEAS)?.toList().orEmpty()
+        val perfil = intent.getStringExtra(ReceptorDeAlarma.EXTRA_PERFIL).orEmpty()
+        val delPerfil = runCatching { AlmacenDePerfiles(this).paraAviso(perfil) }.getOrNull()
 
         setContent {
             MaterialTheme {
                 Surface(Modifier.fillMaxSize()) {
-                    Toma(programada, lineas) { respuesta ->
-                        ReceptorDeRespuesta.responder(this, id, programada, lineas, respuesta)
+                    Toma(programada, lineas, delPerfil) { respuesta ->
+                        ReceptorDeRespuesta.responder(this, id, programada, lineas, respuesta, perfil)
                         finish()
                     }
                 }
@@ -58,11 +62,13 @@ class PantallaDeToma : ComponentActivity() {
 }
 
 @Composable
-private fun Toma(programada: Long, lineas: List<String>, alResponder: (Respuesta) -> Unit) {
+private fun Toma(programada: Long, lineas: List<String>, perfil: Perfil?, alResponder: (Respuesta) -> Unit) {
     Column(
         Modifier.safeDrawingPadding().padding(24.dp).verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
+        // Con varios perfiles, primero para quién es (RN-23).
+        perfil?.let { MarcaDePerfil(it, grande = true) }
         Text(
             if (lineas.size > 1) "Hora de tus medicamentos" else "Hora de tu medicamento",
             style = MaterialTheme.typography.headlineLarge,

@@ -36,13 +36,20 @@ class AlmacenDelPlan(
     }
 
     /**
-     * Agrega alarmas al plan guardado. Una alarma con el mismo identificador reemplaza a la
-     * anterior, y las que ya pasaron se eliminan para que el archivo no crezca sin límite.
+     * Agrega alarmas al plan guardado y devuelve cómo quedaron. Una alarma con el mismo
+     * identificador, del mismo perfil y el mismo minuto, suma sus líneas a la anterior: dos
+     * tratamientos a la misma hora van en un solo aviso (HU-18) y ninguno se pierde. Las que ya
+     * pasaron se eliminan para que el archivo no crezca sin límite.
      */
-    fun agregar(nuevas: List<SolicitudDeAlarma>, ahora: LocalDateTime) = synchronized(BLOQUEO) {
+    fun agregar(nuevas: List<SolicitudDeAlarma>, ahora: LocalDateTime): List<SolicitudDeAlarma> = synchronized(BLOQUEO) {
         val porId = leer().associateBy { it.id }.toMutableMap()
-        nuevas.forEach { porId[it.id] = it }
+        val resultado = nuevas.map { n ->
+            val previa = porId[n.id]
+            (if (previa != null && previa.momento == n.momento) n.copy(lineas = (previa.lineas + n.lineas).distinct()) else n)
+                .also { porId[n.id] = it }
+        }
         guardar(porId.values.filter { it.momento.isAfter(ahora) }.sortedBy { it.momento })
+        resultado
     }
 
     /**
@@ -50,12 +57,17 @@ class AlmacenDelPlan(
      * alarmas que quedaron sin ninguna línea, para cancelarlas, y las que perdieron alguna, para
      * volver a entregarlas con su texto nuevo.
      */
-    fun quitar(esDe: (String, LocalDateTime) -> Boolean, ahora: LocalDateTime): Pair<List<SolicitudDeAlarma>, List<SolicitudDeAlarma>> =
+    fun quitar(
+        esDe: (String, LocalDateTime) -> Boolean,
+        ahora: LocalDateTime,
+        perfil: String? = null,
+    ): Pair<List<SolicitudDeAlarma>, List<SolicitudDeAlarma>> =
         synchronized(BLOQUEO) {
             val vacias = mutableListOf<SolicitudDeAlarma>()
             val cambiadas = mutableListOf<SolicitudDeAlarma>()
             val nuevo = leer().mapNotNull { s ->
-                val quedan = s.lineas.filterNot { esDe(it, s.momento) }
+                // Las tomas de otro perfil no se tocan aunque digan lo mismo (HU-31).
+                val quedan = if (perfil != null && s.perfil != perfil) s.lineas else s.lineas.filterNot { esDe(it, s.momento) }
                 when {
                     quedan.size == s.lineas.size -> s
                     quedan.isEmpty() -> { vacias += s; null }

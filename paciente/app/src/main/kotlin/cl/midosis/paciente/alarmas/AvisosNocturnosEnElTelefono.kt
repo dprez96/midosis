@@ -10,6 +10,7 @@ import android.content.Intent
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import cl.midosis.paciente.R
+import cl.midosis.paciente.perfiles.AlmacenDePerfiles
 import cl.midosis.paciente.rutina.AlmacenDeRutina
 import cl.midosis.paciente.ui.PantallaPrincipal
 import java.io.File
@@ -46,16 +47,24 @@ object AvisosNocturnosEnElTelefono {
 
     fun programar(contexto: Context, plan: List<SolicitudDeAlarma>, ahora: LocalDateTime = LocalDateTime.now()) {
         cancelar(contexto)
-        val rutina = AlmacenDeRutina(contexto).leer()?.rutina ?: return
-        val avisos = AvisosNocturnos.calcular(ProgramadorDeAlarmas.dentroDeLaVentana(plan, ahora), rutina, ahora)
+        val principal = AlmacenDeRutina(contexto).leer()?.rutina ?: return
+        val perfiles = AlmacenDePerfiles(contexto).leer()
+        val enVentana = ProgramadorDeAlarmas.dentroDeLaVentana(plan, ahora)
+        // Cada perfil con su rutina (HU-31). Los de la misma hora van en un solo aviso, cada uno
+        // con su apodo si hay más de un perfil.
+        val textos = enVentana.groupBy { it.perfil }.flatMap { (perfil, deEste) ->
+            val rutina = if (perfil.isEmpty()) principal else AlmacenDeRutina(contexto, perfil).leer()?.rutina ?: principal
+            val apodo = perfiles.takeIf { it.size > 1 }?.firstOrNull { it.id == perfil }?.apodo
+            AvisosNocturnos.calcular(deEste, rutina, ahora).map { it.momento to (apodo?.let { a -> "$a: " }.orEmpty() + AvisosNocturnos.frase(it.horas)) }
+        }.groupBy({ it.first }, { it.second })
         val alarmas = contexto.getSystemService(AlarmManager::class.java)
-        avisos.forEach { aviso ->
+        textos.forEach { (momento, frases) ->
             // El receptor es otro, así que el identificador no choca con el de una toma.
-            val id = identificador(aviso.momento)
-            val cuando = PlanDeAlarmas.instante(aviso.momento)
-            alarmas.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, cuando, intencion(contexto, id, AvisosNocturnos.frase(aviso.horas)))
+            val id = identificador(momento)
+            val cuando = PlanDeAlarmas.instante(momento)
+            alarmas.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, cuando, intencion(contexto, id, frases.joinToString("\n")))
         }
-        archivo(contexto).writeText(avisos.joinToString("\n") { identificador(it.momento).toString() })
+        archivo(contexto).writeText(textos.keys.joinToString("\n") { identificador(it).toString() })
     }
 
     fun cancelar(contexto: Context) {

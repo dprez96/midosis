@@ -10,6 +10,7 @@ import android.content.Intent
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import cl.midosis.paciente.R
+import cl.midosis.paciente.perfiles.AlmacenDePerfiles
 import cl.midosis.paciente.rutina.AlmacenDeRutina
 import cl.midosis.paciente.tratamiento.AlmacenDeTratamientos
 import cl.midosis.paciente.tratamiento.AvisosDeRetiro
@@ -49,17 +50,24 @@ object AvisosDeRetiroEnElTelefono {
     }
 
     fun programar(contexto: Context, ahora: LocalDateTime = LocalDateTime.now()) {
-        val rutina = AlmacenDeRutina(contexto).leer()?.rutina ?: return
-        val avisos = AvisosDeRetiro.calcular(AlmacenDeTratamientos(contexto).leer(), rutina, ahora)
+        val principal = AlmacenDeRutina(contexto).leer()?.rutina ?: return
+        val perfiles = AlmacenDePerfiles(contexto).leer()
+        // Cada perfil con su rutina y, si hay varios, con su apodo delante (HU-31).
+        val lineas = AlmacenDeTratamientos(contexto).leer().groupBy { it.perfil }.flatMap { (perfil, deEste) ->
+            val rutina = if (perfil.isEmpty()) principal else AlmacenDeRutina(contexto, perfil).leer()?.rutina ?: principal
+            val apodo = perfiles.takeIf { it.size > 1 }?.firstOrNull { it.id == perfil }?.apodo
+            AvisosDeRetiro.calcular(deEste, rutina, ahora).flatMap { aviso ->
+                aviso.productos.map { aviso.momento to "${apodo?.let { a -> "$a, " }.orEmpty()}${it.etiqueta}: se acaba el ${it.seAgotaEl.format(FECHA)}" }
+            }
+        }.groupBy({ it.first }, { it.second })
         val alarmas = contexto.getSystemService(AlarmManager::class.java)
         cancelar(contexto)
-        avisos.forEach { aviso ->
-            val id = identificador(aviso.momento)
-            val texto = aviso.productos.joinToString("\n") { "${it.etiqueta}: se acaba el ${it.seAgotaEl.format(FECHA)}" }
-            val cuando = PlanDeAlarmas.instante(aviso.momento)
-            alarmas.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, cuando, intencion(contexto, id, texto))
+        lineas.forEach { (momento, textos) ->
+            val id = identificador(momento)
+            val cuando = PlanDeAlarmas.instante(momento)
+            alarmas.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, cuando, intencion(contexto, id, textos.joinToString("\n")))
         }
-        archivo(contexto).writeText(avisos.joinToString("\n") { identificador(it.momento).toString() })
+        archivo(contexto).writeText(lineas.keys.joinToString("\n") { identificador(it).toString() })
     }
 
     fun cancelar(contexto: Context) {
