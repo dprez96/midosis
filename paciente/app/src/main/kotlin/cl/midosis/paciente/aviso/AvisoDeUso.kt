@@ -17,7 +17,7 @@ data class Seccion(val titulo: String, val puntos: List<String>, val urgente: Bo
  */
 object AvisoDeUso {
 
-    const val VERSION = 1
+    const val VERSION = 2
 
     const val TITULO = "Antes de empezar"
 
@@ -67,7 +67,7 @@ object AvisoDeUso {
             "Ante una urgencia",
             listOf(
                 "Si te falta el aire, se te hinchan la cara o los labios, tienes dolor en el pecho o te desmayas, " +
-                    "llama al SAMU (131) o ve al servicio de urgencia más cercano.",
+                    "llama al 131, la ambulancia del SAMU (Servicio de Atención Médica de Urgencia), o ve al servicio de urgencia más cercano.",
                 "Si tomaste más de la dosis indicada o alguien tomó tu medicamento por error, llama al Centro de " +
                     "Información Toxicológica (CITUC), que atiende las 24 horas: 2 2635 3800.",
             ),
