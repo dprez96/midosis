@@ -15,7 +15,8 @@ import java.util.Base64
 enum class ColorDePerfil(val nombre: String, val argb: Long) {
     AZUL("Azul", 0xFF1565C0),
     VERDE("Verde", 0xFF2E7D32),
-    NARANJA("Naranja", 0xFFE65100),
+    // Más oscuro que el naranja de Material (E65100): con la inicial en blanco llega a 5,6:1 (WCAG AA).
+    NARANJA("Naranja", 0xFFBF360C),
     MORADO("Morado", 0xFF6A1B9A),
 }
 
