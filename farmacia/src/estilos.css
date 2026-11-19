@@ -1,11 +1,17 @@
+/*
+ * Accesibilidad WCAG 2.1 AAA (RNF-19). Todo texto tiene contraste de 7:1 o más contra su fondo
+ * (1.4.6): el primario llega a 8,9:1 con blanco y el secundario a 8,3:1 sobre el fondo. Los
+ * controles miden al menos 44 px (2.5.5), las líneas no pasan de unos 75 caracteres y los
+ * párrafos se separan una vez y media el interlineado (1.4.8).
+ */
 :root {
   --fondo: #f4f6f9;
   --superficie: #ffffff;
   --texto: #1b2430;
-  --secundario: #4a5565;
+  --secundario: #404a59;
   --borde: #d3d9e1;
-  --primario: #0b5cab;
-  --primario-oscuro: #08467f;
+  --primario: #094a8c;
+  --primario-oscuro: #063a6e;
   --exito-fondo: #e6f5eb;
   --exito-texto: #0f5a2e;
   --info-fondo: #e8f1fb;
@@ -18,7 +24,7 @@
 
   color-scheme: light;
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  font-size: 16px;
+  /* Sin tamaño fijo en la raíz: así crece con el ajuste de texto del sistema y del navegador. */
   line-height: 1.5;
   color: var(--texto);
   background: var(--fondo);
@@ -50,7 +56,57 @@ h2 {
 
 :focus-visible {
   outline: 3px solid var(--primario);
-  outline-offset: 2px;
+  outline-offset: 3px;
+}
+
+/* 1.4.8: líneas de hasta unos 75 caracteres y párrafos separados 1,5 veces el interlineado. */
+p,
+li,
+legend {
+  max-inline-size: 75ch;
+}
+
+p + p {
+  margin-block-start: 1.5rem;
+}
+
+/* El enlace para saltar la navegación aparece solo al recibir el foco (2.4.1). */
+.saltar {
+  position: absolute;
+  inset-inline-start: 16px;
+  inset-block-start: -100px;
+  padding: 12px 16px;
+  font-weight: 700;
+  color: #ffffff;
+  background: var(--primario);
+  border-radius: 8px;
+  z-index: 10;
+}
+
+.saltar:focus {
+  inset-block-start: 16px;
+}
+
+/* 2.3.3: sin animaciones para quien pidió reducir el movimiento. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Modo de alto contraste de Windows: la sección actual y el foco siguen distinguiéndose. */
+@media (forced-colors: active) {
+  .secciones button[aria-current='page'] {
+    outline: 3px solid CanvasText;
+  }
+  :focus-visible {
+    outline-color: Highlight;
+  }
 }
 
 /* ---------------------------------------------------------------- estructura */
@@ -132,6 +188,7 @@ label {
 input,
 select {
   width: 100%;
+  min-block-size: 44px;
   padding: 10px 12px;
   font: inherit;
   color: inherit;
@@ -143,6 +200,13 @@ select {
 .lector input {
   font-size: 1.25rem;
   letter-spacing: 0.02em;
+}
+
+/* 2.5.5: todo control mide al menos 44 x 44 px. */
+button,
+a {
+  min-block-size: 44px;
+  min-inline-size: 44px;
 }
 
 button {
@@ -176,7 +240,7 @@ button.primario:hover {
 
 button.enlace {
   justify-self: start;
-  padding: 4px 0;
+  padding: 10px 0;
   border: none;
   background: none;
   text-decoration: underline;
@@ -231,6 +295,23 @@ button.enlace {
 .tabla th[scope='row'],
 .tabla thead th:first-child {
   text-align: left;
+}
+
+/* ---------------------------------------------------------------- ayuda */
+
+.glosario {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+
+.glosario dt {
+  font-weight: 700;
+}
+
+.glosario dd {
+  margin: 0;
+  max-inline-size: 75ch;
 }
 
 /* ---------------------------------------------------------------- avisos */
