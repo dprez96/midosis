@@ -92,6 +92,17 @@ export interface ApiDeCorreccion {
   ): Promise<CodigoEmitido>
 }
 
+/** Un archivo descargado de core, con el nombre que propone. */
+export interface Descarga {
+  nombre: string
+  contenido: Blob
+}
+
+export interface ApiDeExportacion {
+  /** Solo el administrador comunal; core responde 403 a cualquier otro rol (HU-29). */
+  exportar(): Promise<Descarga>
+}
+
 /** La demanda proyectada de la comuna (HU-27), tal como la entrega core. */
 export interface DemandaProyectada {
   /** El lunes de cada semana, AAAA-MM-DD. */
@@ -111,7 +122,8 @@ export type ApiDelMeson = ApiDeCatalogo &
   ApiDeEmision &
   ApiDeRevocacion &
   ApiDeDemanda &
-  ApiDeCorreccion
+  ApiDeCorreccion &
+  ApiDeExportacion
 
 const MENSAJES_POR_ESTADO: Record<number, string> = {
   401: 'La sesión expiró. Vuelva a iniciar sesión.',
@@ -131,13 +143,18 @@ function mensajePorEstado(estado: number): string {
  */
 export function crearApi(obtenerToken: ObtenerToken, base = '/api'): ApiDelMeson {
   async function pedir<T>(ruta: string, opciones: RequestInit = {}): Promise<T> {
+    return (await (await llamar(ruta, opciones)).json()) as T
+  }
+
+  /** La llamada a core con el token; falla con [ErrorDeApi] si no responde 2xx. */
+  async function llamar(ruta: string, opciones: RequestInit = {}, acepta = 'application/json'): Promise<Response> {
     const token = await obtenerToken()
     let respuesta: Response
     try {
       respuesta = await fetch(`${base}${ruta}`, {
         ...opciones,
         headers: {
-          Accept: 'application/json',
+          Accept: acepta,
           Authorization: `Bearer ${token}`,
           ...(opciones.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
         },
@@ -154,7 +171,7 @@ export function crearApi(obtenerToken: ObtenerToken, base = '/api'): ApiDelMeson
       }
       throw new ErrorDeApi(respuesta.status, mensaje)
     }
-    return (await respuesta.json()) as T
+    return respuesta
   }
 
   return {
@@ -209,6 +226,14 @@ export function crearApi(obtenerToken: ObtenerToken, base = '/api'): ApiDelMeson
 
     demanda() {
       return pedir<DemandaProyectada>('/demanda')
+    },
+
+    async exportar() {
+      // Acepta también JSON: los errores de core vienen así.
+      const respuesta = await llamar('/exportacion', {}, 'application/zip, application/json')
+      const disposicion = respuesta.headers.get('Content-Disposition') ?? ''
+      const nombre = /filename="([^"]+)"/.exec(disposicion)?.[1] ?? 'midosis-exportacion.zip'
+      return { nombre, contenido: await respuesta.blob() }
     },
 
     async revocar(id, motivo) {

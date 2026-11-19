@@ -42,6 +42,8 @@ class ConfiguracionSeguridad {
                 // La proyección de la demanda es para programar la compra a CENABAST, que hace el
                 // químico farmacéutico (HU-27).
                 it.requestMatchers("/api/demanda").hasAuthority(AUTORIDAD_QF)
+                // La exportación entrega todos los datos de la comuna: solo el administrador comunal (HU-29).
+                it.requestMatchers("/api/exportacion").hasAuthority(AUTORIDAD_ADMINISTRADOR)
                 it.anyRequest().authenticated()
             }
             .oauth2ResourceServer { servidor -> servidor.jwt { it.jwtAuthenticationConverter(rolesDelToken()) } }
@@ -71,6 +73,7 @@ class ConfiguracionSeguridad {
         const val CLAIM_ROL = "rol"
         const val PREFIJO_ROL = "ROL_"
         const val AUTORIDAD_QF = "${PREFIJO_ROL}qf"
+        const val AUTORIDAD_ADMINISTRADOR = "${PREFIJO_ROL}administrador"
         const val RUTA_CANJE = "/api/canje"
         const val RUTA_ESTADO = "/api/estado"
     }

@@ -4,6 +4,7 @@ import { CodigosEmitidos } from './emisiones/CodigosEmitidos'
 import { Correccion } from './emisiones/Correccion'
 import type { CorreccionEnCurso } from './dominio/correccion'
 import { Demanda } from './demanda/Demanda'
+import { Exportacion } from './exportacion/Exportacion'
 import { PantallaMeson } from './meson/PantallaMeson'
 import { PantallaIngreso } from './sesion/PantallaIngreso'
 import { NOMBRE_DEL_ROL, type Perfil, type ServicioDeSesion } from './sesion/sesion'
@@ -34,7 +35,12 @@ export function App({ servicio, api }: Props) {
       <Encabezado perfil={perfil} cerrar={servicio.cerrar} />
       <main className="contenido">
         {perfil.comuna && perfil.rol ? (
-          <Secciones api={api} esQf={perfil.rol === 'qf'} validar={servicio.tokenDeValidacion} />
+          <Secciones
+            api={api}
+            esQf={perfil.rol === 'qf'}
+            esAdministrador={perfil.rol === 'administrador'}
+            validar={servicio.tokenDeValidacion}
+          />
         ) : (
           <PerfilIncompleto />
         )}
@@ -43,7 +49,7 @@ export function App({ servicio, api }: Props) {
   )
 }
 
-type Seccion = 'meson' | 'emitidos' | 'correccion' | 'demanda'
+type Seccion = 'meson' | 'emitidos' | 'correccion' | 'demanda' | 'exportacion'
 
 /**
  * El mesón, los códigos emitidos y, para el químico farmacéutico, la corrección de un
@@ -54,10 +60,12 @@ type Seccion = 'meson' | 'emitidos' | 'correccion' | 'demanda'
 function Secciones({
   api,
   esQf,
+  esAdministrador,
   validar,
 }: {
   api: ApiDelMeson
   esQf: boolean
+  esAdministrador: boolean
   validar: (correo: string, clave: string) => Promise<string>
 }) {
   const [seccion, setSeccion] = useState<Seccion>('meson')
@@ -93,6 +101,15 @@ function Secciones({
             Demanda proyectada
           </button>
         )}
+        {esAdministrador && (
+          <button
+            type="button"
+            aria-current={seccion === 'exportacion' ? 'page' : undefined}
+            onClick={() => setSeccion('exportacion')}
+          >
+            Exportar datos
+          </button>
+        )}
       </nav>
       <div hidden={seccion !== 'meson'}>
         <PantallaMeson
@@ -114,6 +131,7 @@ function Secciones({
         />
       )}
       {seccion === 'demanda' && esQf && <Demanda api={api} />}
+      {seccion === 'exportacion' && esAdministrador && <Exportacion api={api} />}
     </>
   )
 }
