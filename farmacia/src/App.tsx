@@ -5,6 +5,7 @@ import { Correccion } from './emisiones/Correccion'
 import type { CorreccionEnCurso } from './dominio/correccion'
 import { Demanda } from './demanda/Demanda'
 import { Exportacion } from './exportacion/Exportacion'
+import { Ayuda } from './ayuda/Ayuda'
 import { PantallaMeson } from './meson/PantallaMeson'
 import { PantallaIngreso } from './sesion/PantallaIngreso'
 import { NOMBRE_DEL_ROL, type Perfil, type ServicioDeSesion } from './sesion/sesion'
@@ -32,8 +33,11 @@ export function App({ servicio, api }: Props) {
   const { perfil } = estado
   return (
     <>
+      <a className="saltar" href="#contenido">
+        Saltar al contenido
+      </a>
       <Encabezado perfil={perfil} cerrar={servicio.cerrar} />
-      <main className="contenido">
+      <main className="contenido" id="contenido" tabIndex={-1}>
         {perfil.comuna && perfil.rol ? (
           <Secciones
             api={api}
@@ -49,7 +53,7 @@ export function App({ servicio, api }: Props) {
   )
 }
 
-type Seccion = 'meson' | 'emitidos' | 'correccion' | 'demanda' | 'exportacion'
+type Seccion = 'meson' | 'emitidos' | 'correccion' | 'demanda' | 'exportacion' | 'ayuda'
 
 /**
  * El mesón, los códigos emitidos y, para el químico farmacéutico, la corrección de un
@@ -110,6 +114,9 @@ function Secciones({
             Exportar datos
           </button>
         )}
+        <button type="button" aria-current={seccion === 'ayuda' ? 'page' : undefined} onClick={() => setSeccion('ayuda')}>
+          Ayuda
+        </button>
       </nav>
       <div hidden={seccion !== 'meson'}>
         <PantallaMeson
@@ -132,6 +139,7 @@ function Secciones({
       )}
       {seccion === 'demanda' && esQf && <Demanda api={api} />}
       {seccion === 'exportacion' && esAdministrador && <Exportacion api={api} />}
+      {seccion === 'ayuda' && <Ayuda />}
     </>
   )
 }
