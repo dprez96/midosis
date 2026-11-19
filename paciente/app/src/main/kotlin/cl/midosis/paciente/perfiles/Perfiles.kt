@@ -13,11 +13,11 @@ import java.util.Base64
  * quién corresponde un aviso (RN-21, RN-23).
  */
 enum class ColorDePerfil(val nombre: String, val argb: Long) {
-    AZUL("Azul", 0xFF1565C0),
-    VERDE("Verde", 0xFF2E7D32),
-    // Más oscuro que el naranja de Material (E65100): con la inicial en blanco llega a 5,6:1 (WCAG AA).
-    NARANJA("Naranja", 0xFFBF360C),
-    MORADO("Morado", 0xFF6A1B9A),
+    // Tonos oscuros para que la inicial en blanco llegue a 7:1 (WCAG 2.1 AAA, criterio 1.4.6).
+    AZUL("Azul", 0xFF0D47A1), // 8,6:1
+    VERDE("Verde", 0xFF1B5E20), // 7,9:1
+    NARANJA("Naranja", 0xFF9A3412), // 7,3:1
+    MORADO("Morado", 0xFF6A1B9A), // 9,4:1
 }
 
 /**

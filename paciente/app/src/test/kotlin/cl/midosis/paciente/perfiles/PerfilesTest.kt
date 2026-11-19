@@ -109,13 +109,13 @@ class PerfilesTest {
     )
 
     @Test
-    fun `la inicial en blanco se lee sobre todos los colores con contraste AA`() {
+    fun `la inicial en blanco se lee sobre todos los colores con contraste AAA`() {
         fun luminancia(c: Int): Double = c.toDouble().div(255).let { if (it <= 0.03928) it / 12.92 else Math.pow((it + 0.055) / 1.055, 2.4) }
         ColorDePerfil.entries.forEach { color ->
             val argb = color.argb
             val l = 0.2126 * luminancia(((argb shr 16) and 0xFF).toInt()) + 0.7152 * luminancia(((argb shr 8) and 0xFF).toInt()) +
                 0.0722 * luminancia((argb and 0xFF).toInt())
-            assertTrue(1.05 / (l + 0.05) >= 4.5, "${color.nombre}: contraste ${1.05 / (l + 0.05)}")
+            assertTrue(1.05 / (l + 0.05) >= 7.0, "${color.nombre}: contraste ${1.05 / (l + 0.05)}")
         }
     }
 }
