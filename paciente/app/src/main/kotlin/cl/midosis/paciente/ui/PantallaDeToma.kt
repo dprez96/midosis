@@ -49,7 +49,7 @@ class PantallaDeToma : ComponentActivity() {
         val delPerfil = runCatching { AlmacenDePerfiles(this).paraAviso(perfil) }.getOrNull()
 
         setContent {
-            MaterialTheme {
+            TemaMiDosis {
                 Surface(Modifier.fillMaxSize()) {
                     Toma(programada, lineas, delPerfil) { respuesta ->
                         ReceptorDeRespuesta.responder(this, id, programada, lineas, respuesta, perfil)

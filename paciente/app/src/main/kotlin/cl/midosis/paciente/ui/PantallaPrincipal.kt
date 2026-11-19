@@ -58,7 +58,7 @@ class PantallaPrincipal : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MaterialTheme {
+            TemaMiDosis {
                 Surface { AppPaciente() }
             }
         }
