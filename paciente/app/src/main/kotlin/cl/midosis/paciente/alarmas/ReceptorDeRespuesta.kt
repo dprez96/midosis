@@ -21,7 +21,8 @@ class ReceptorDeRespuesta : BroadcastReceiver() {
         val id = intencion.getIntExtra(ReceptorDeAlarma.EXTRA_ID, 0)
         val programada = intencion.getLongExtra(ReceptorDeAlarma.EXTRA_PROGRAMADA, 0)
         val lineas = intencion.getStringArrayExtra(ReceptorDeAlarma.EXTRA_LINEAS)?.toList().orEmpty()
-        responder(contexto, id, programada, lineas, respuesta)
+        val perfil = intencion.getStringExtra(ReceptorDeAlarma.EXTRA_PERFIL).orEmpty()
+        responder(contexto, id, programada, lineas, respuesta, perfil)
     }
 
     companion object {
@@ -31,7 +32,7 @@ class ReceptorDeRespuesta : BroadcastReceiver() {
          * Anota la respuesta y deja de insistir. La usan los botones de la notificación y los
          * de la pantalla de la toma.
          */
-        fun responder(contexto: Context, id: Int, programada: Long, lineas: List<String>, respuesta: Respuesta) {
+        fun responder(contexto: Context, id: Int, programada: Long, lineas: List<String>, respuesta: Respuesta, perfil: String = "") {
             val ahora = Instant.now()
 
             HistorialDeTomas(contexto).anotar(
@@ -42,7 +43,7 @@ class ReceptorDeRespuesta : BroadcastReceiver() {
             NotificationManagerCompat.from(contexto).cancel(id)
             if (respuesta == Respuesta.POSPUESTA) {
                 programador.programarRecordatorio(
-                    id, lineas, programada, ahora.plus(Reiteraciones.POSPONER).toEpochMilli(), ReceptorDeAlarma.POSPUESTO,
+                    id, lineas, programada, ahora.plus(Reiteraciones.POSPONER).toEpochMilli(), ReceptorDeAlarma.POSPUESTO, perfil,
                 )
             }
         }

@@ -11,7 +11,9 @@ import java.time.LocalTime
  */
 class AlmacenDeRutina(private val archivo: ArchivoCifrado) {
 
-    constructor(contexto: Context) : this(ArchivoCifrado(contexto, "rutina.bin"))
+    /** Cada perfil tiene su rutina (HU-31, RF-M-27); la del principal, la de siempre. */
+    constructor(contexto: Context, perfil: String = "") :
+        this(ArchivoCifrado(contexto, if (perfil.isEmpty()) "rutina.bin" else "rutina-$perfil.bin"))
 
     fun leer(): RutinaGuardada? = archivo.leer()?.let(FormatoDeRutina::leer)
 

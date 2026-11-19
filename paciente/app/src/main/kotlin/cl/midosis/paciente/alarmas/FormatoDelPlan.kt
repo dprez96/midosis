@@ -11,7 +11,8 @@ import java.util.Base64
  */
 object FormatoDelPlan {
 
-    private const val VERSION = "1"
+    private const val VERSION = "2"
+    private const val VERSION_ANTERIOR = "1"
     private val codificar = Base64.getEncoder()
     private val decodificar = Base64.getDecoder()
 
@@ -20,20 +21,23 @@ object FormatoDelPlan {
             append(VERSION).append('\n')
             for (s in plan) {
                 val lineas = s.lineas.joinToString(",") { b64(it) }
-                append(s.id).append(' ').append(b64(s.momento.toString())).append(' ').append(lineas).append('\n')
+                append(s.id).append(' ').append(b64(s.momento.toString())).append(' ').append(lineas)
+                    .append(' ').append(b64(s.perfil)).append('\n')
             }
         }
 
     fun leer(texto: String): List<SolicitudDeAlarma> {
         val filas = texto.split('\n').filter { it.isNotEmpty() }
-        require(filas.firstOrNull() == VERSION) { "formato del plan desconocido" }
+        // La versión 1, anterior a los perfiles, no trae el perfil: es del principal.
+        require(filas.firstOrNull() == VERSION || filas.firstOrNull() == VERSION_ANTERIOR) { "formato del plan desconocido" }
         return filas.drop(1).map { fila ->
             val partes = fila.split(' ')
-            require(partes.size == 3) { "fila del plan mal formada" }
+            require(partes.size == 3 || partes.size == 4) { "fila del plan mal formada" }
             SolicitudDeAlarma(
                 id = partes[0].toInt(),
                 momento = LocalDateTime.parse(desde(partes[1])),
                 lineas = if (partes[2].isEmpty()) emptyList() else partes[2].split(',').map(::desde),
+                perfil = partes.getOrNull(3)?.let(::desde).orEmpty(),
             )
         }
     }

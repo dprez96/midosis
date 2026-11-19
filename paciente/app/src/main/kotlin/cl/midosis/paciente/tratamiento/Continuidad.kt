@@ -87,7 +87,8 @@ object Continuidad {
     fun vigentes(guardados: List<TratamientoGuardado>): List<Pair<TratamientoGuardado, Producto>> =
         guardados
             .flatMap { t -> t.carga.productos.map { t to it } }
-            .groupBy { (_, p) -> p.gtin }
+            // El mismo medicamento en dos perfiles son dos tratamientos (HU-31).
+            .groupBy { (t, p) -> t.perfil to p.gtin }
             .values
             .map { tramos -> tramos.maxBy { (t, _) -> t.cargadoEn } }
             .sortedBy { (t, _) -> t.cargadoEn }

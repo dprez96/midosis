@@ -17,6 +17,8 @@ data class SolicitudDeAlarma(
     val id: Int,
     val momento: LocalDateTime,
     val lineas: List<String>,
+    /** El perfil del paciente (HU-31): tomas de perfiles distintos nunca comparten aviso (RN-23). */
+    val perfil: String = "",
 )
 
 object PlanDeAlarmas {
@@ -25,14 +27,15 @@ object PlanDeAlarmas {
      * Agrupa las tomas coincidentes (HU-18) y descarta las que ya pasaron: una alarma en
      * el pasado sonaría de inmediato y confundiría al paciente.
      */
-    fun construir(tomas: List<TomaProgramada>, ahora: LocalDateTime): List<SolicitudDeAlarma> =
+    fun construir(tomas: List<TomaProgramada>, ahora: LocalDateTime, perfil: String = "", orden: Int = 0): List<SolicitudDeAlarma> =
         AgrupadorDeTomas.agrupar(tomas)
             .filter { it.momento.isAfter(ahora) }
             .map { aviso ->
                 SolicitudDeAlarma(
-                    id = identificador(aviso.momento),
+                    id = identificador(aviso.momento, orden),
                     momento = aviso.momento,
                     lineas = aviso.tomas.map { "${it.producto} · ${it.dosis}" },
+                    perfil = perfil,
                 )
             }
 
@@ -46,7 +49,14 @@ object PlanDeAlarmas {
     fun instante(momento: LocalDateTime, zona: ZoneId = ZoneId.systemDefault()): Long =
         momento.atZone(zona).toInstant().toEpochMilli()
 
-    /** Minutos desde 1970: cabe en un Int hasta el año 6053 y es único por minuto. */
-    fun identificador(momento: LocalDateTime): Int =
-        Math.toIntExact(momento.toEpochSecond(ZoneOffset.UTC) / 60)
+    /**
+     * Minutos desde 1970: cabe en un Int hasta el año 6053 y es único por minuto. El perfil
+     * principal ([orden] 0) usa el minuto tal cual, como antes de los perfiles; los demás, un
+     * número negativo distinto para cada uno, así dos perfiles a la misma hora tienen dos avisos
+     * (RN-23).
+     */
+    fun identificador(momento: LocalDateTime, orden: Int = 0): Int {
+        val minuto = Math.toIntExact(momento.toEpochSecond(ZoneOffset.UTC) / 60)
+        return if (orden == 0) minuto else -Math.addExact(Math.multiplyExact(minuto, 4), orden)
+    }
 }

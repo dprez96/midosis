@@ -11,6 +11,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import cl.midosis.paciente.R
+import cl.midosis.paciente.perfiles.AlmacenDePerfiles
 import cl.midosis.paciente.tratamiento.AlmacenDeTratamientos
 import cl.midosis.paciente.ui.PantallaDeToma
 import java.time.Instant
@@ -34,6 +35,7 @@ class ReceptorDeAlarma : BroadcastReceiver() {
         val programada = intencion.getLongExtra(EXTRA_PROGRAMADA, disparada)
         val lineas = intencion.getStringArrayExtra(EXTRA_LINEAS)?.toList().orEmpty()
         val intento = intencion.getIntExtra(EXTRA_INTENTO, 0)
+        val perfil = intencion.getStringExtra(EXTRA_PERFIL).orEmpty()
         val programador = ProgramadorDeAlarmas(contexto)
 
         // Las alarmas del banco de dispositivos solo miden el desfase: no piden respuesta, no
@@ -43,18 +45,18 @@ class ReceptorDeAlarma : BroadcastReceiver() {
 
         if (intento == 0) {
             RegistroDeDisparos(contexto).anotar(id, programada, disparada)
-            notificar(contexto, id, programada, lineas, conRespuesta = !deBanco)
+            notificar(contexto, id, programada, lineas, perfil, conRespuesta = !deBanco)
             if (!deBanco) {
                 Reiteraciones.momentos(Instant.ofEpochMilli(programada)).forEachIndexed { i, momento ->
-                    programador.programarRecordatorio(id, lineas, programada, momento.toEpochMilli(), i + 1)
+                    programador.programarRecordatorio(id, lineas, programada, momento.toEpochMilli(), i + 1, perfil)
                 }
             }
             // Cada alarma que suena hace avanzar la ventana de las que se entregan al sistema.
             programador.reprogramarGuardadas()
-            if (!deBanco) locutar(contexto, lineas)
+            if (!deBanco) locutar(contexto, lineas, perfil)
         } else if (!HistorialDeTomas(contexto).cerrado(id, Instant.ofEpochSecond(programada / 1000))) {
-            notificar(contexto, id, programada, lineas, conRespuesta = true)
-            locutar(contexto, lineas)
+            notificar(contexto, id, programada, lineas, perfil, conRespuesta = true)
+            locutar(contexto, lineas, perfil)
         }
     }
 
@@ -62,7 +64,7 @@ class ReceptorDeAlarma : BroadcastReceiver() {
      * Lee la toma en voz alta si el paciente lo pidió. La recepción queda abierta hasta que la
      * voz termina, con un límite, para que el sistema no cierre el proceso a mitad de frase.
      */
-    private fun locutar(contexto: Context, lineas: List<String>) {
+    private fun locutar(contexto: Context, lineas: List<String>, perfil: String) {
         if (lineas.isEmpty() || !Locutor.activada(contexto)) return
         val indicaciones = try {
             TextoDeLocucion.indicacionesDe(AlmacenDeTratamientos(contexto).leer())
@@ -71,15 +73,19 @@ class ReceptorDeAlarma : BroadcastReceiver() {
             emptyMap()
         }
         val pendiente = goAsync()
-        Locutor.hablar(contexto, TextoDeLocucion.armar(lineas, indicaciones)) { pendiente.finish() }
+        // Con varios perfiles, la voz dice primero para quién es (RN-23).
+        val para = AlmacenDePerfiles(contexto).paraAviso(perfil)?.let { "Para ${it.apodo}. " }.orEmpty()
+        Locutor.hablar(contexto, para + TextoDeLocucion.armar(lineas, indicaciones)) { pendiente.finish() }
     }
 
-    private fun notificar(contexto: Context, id: Int, programada: Long, lineas: List<String>, conRespuesta: Boolean) {
+    private fun notificar(contexto: Context, id: Int, programada: Long, lineas: List<String>, perfil: String, conRespuesta: Boolean) {
         val permitido = ContextCompat.checkSelfPermission(contexto, Manifest.permission.POST_NOTIFICATIONS) ==
             PackageManager.PERMISSION_GRANTED
         if (!permitido) return
 
-        val titulo = contexto.getString(
+        // Con varios perfiles, cada aviso empieza con el apodo y lleva el color del perfil (RN-23).
+        val delPerfil = AlmacenDePerfiles(contexto).paraAviso(perfil)
+        val titulo = (delPerfil?.let { "${it.apodo} · " }.orEmpty()) + contexto.getString(
             if (lineas.size > 1) R.string.notificacion_titulo_varios else R.string.notificacion_titulo,
         )
         val estilo = NotificationCompat.InboxStyle().setBigContentTitle(titulo)
@@ -96,16 +102,17 @@ class ReceptorDeAlarma : BroadcastReceiver() {
             .setVibrate(CanalDeTomas.VIBRACION)
             .setDefaults(Notification.DEFAULT_LIGHTS)
             .setAutoCancel(true)
+        delPerfil?.let { constructor.setColor(it.color.argb.toInt()) }
         if (conRespuesta) {
             constructor
-                .addAction(0, contexto.getString(R.string.respuesta_tomada), respuesta(contexto, id, programada, lineas, Respuesta.TOMADA))
-                .addAction(0, contexto.getString(R.string.respuesta_pospuesta), respuesta(contexto, id, programada, lineas, Respuesta.POSPUESTA))
-                .addAction(0, contexto.getString(R.string.respuesta_omitida), respuesta(contexto, id, programada, lineas, Respuesta.OMITIDA))
+                .addAction(0, contexto.getString(R.string.respuesta_tomada), respuesta(contexto, id, programada, lineas, perfil, Respuesta.TOMADA))
+                .addAction(0, contexto.getString(R.string.respuesta_pospuesta), respuesta(contexto, id, programada, lineas, perfil, Respuesta.POSPUESTA))
+                .addAction(0, contexto.getString(R.string.respuesta_omitida), respuesta(contexto, id, programada, lineas, perfil, Respuesta.OMITIDA))
                 // Con el teléfono bloqueado, la toma se muestra a pantalla completa, como un
                 // despertador; desbloqueado, aparece arriba con los botones. Tocarla también
                 // abre la pantalla de la toma.
-                .setFullScreenIntent(pantallaDeToma(contexto, id, programada, lineas), true)
-                .setContentIntent(pantallaDeToma(contexto, id, programada, lineas))
+                .setFullScreenIntent(pantallaDeToma(contexto, id, programada, lineas, perfil), true)
+                .setContentIntent(pantallaDeToma(contexto, id, programada, lineas, perfil))
         }
         val notificacion = constructor.build()
 
@@ -116,7 +123,7 @@ class ReceptorDeAlarma : BroadcastReceiver() {
         }
     }
 
-    private fun pantallaDeToma(contexto: Context, id: Int, programada: Long, lineas: List<String>): PendingIntent =
+    private fun pantallaDeToma(contexto: Context, id: Int, programada: Long, lineas: List<String>, perfil: String): PendingIntent =
         PendingIntent.getActivity(
             contexto,
             id,
@@ -124,11 +131,12 @@ class ReceptorDeAlarma : BroadcastReceiver() {
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
                 .putExtra(EXTRA_ID, id)
                 .putExtra(EXTRA_PROGRAMADA, programada)
-                .putExtra(EXTRA_LINEAS, lineas.toTypedArray()),
+                .putExtra(EXTRA_LINEAS, lineas.toTypedArray())
+                .putExtra(EXTRA_PERFIL, perfil),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
-    private fun respuesta(contexto: Context, id: Int, programada: Long, lineas: List<String>, r: Respuesta): PendingIntent =
+    private fun respuesta(contexto: Context, id: Int, programada: Long, lineas: List<String>, perfil: String, r: Respuesta): PendingIntent =
         PendingIntent.getBroadcast(
             contexto,
             id,
@@ -136,7 +144,8 @@ class ReceptorDeAlarma : BroadcastReceiver() {
                 .setAction(ReceptorDeRespuesta.ACCION + r.codigo)
                 .putExtra(EXTRA_ID, id)
                 .putExtra(EXTRA_PROGRAMADA, programada)
-                .putExtra(EXTRA_LINEAS, lineas.toTypedArray()),
+                .putExtra(EXTRA_LINEAS, lineas.toTypedArray())
+                .putExtra(EXTRA_PERFIL, perfil),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
@@ -150,5 +159,6 @@ class ReceptorDeAlarma : BroadcastReceiver() {
         const val EXTRA_ID = "cl.midosis.paciente.ID"
         const val EXTRA_PROGRAMADA = "cl.midosis.paciente.PROGRAMADA"
         const val EXTRA_LINEAS = "cl.midosis.paciente.LINEAS"
+        const val EXTRA_PERFIL = "cl.midosis.paciente.PERFIL"
     }
 }

@@ -65,6 +65,16 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import cl.midosis.paciente.perfiles.AlmacenDePerfiles
+import cl.midosis.paciente.perfiles.Perfiles
+import cl.midosis.paciente.perfiles.Perfil
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.ui.semantics.Role
+import androidx.compose.material3.RadioButton
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.Alignment
 
 /** Dónde está el paciente dentro de la aplicación. */
 private sealed interface Pantalla {
@@ -74,7 +84,10 @@ private sealed interface Pantalla {
     data class Confirmar(val lectura: Lectura.Aceptado) : Pantalla
     data class Rechazo(val mensaje: MensajeDeRechazo) : Pantalla
     data object YaCargado : Pantalla
-    data class Entrevistar(val entrevista: Entrevista) : Pantalla
+    /** La rutina de un perfil: [perfil] vacío es el principal (HU-31). */
+    data class Entrevistar(val entrevista: Entrevista, val perfil: String = "") : Pantalla
+
+    data object Perfiles : Pantalla
     data object Pruebas : Pantalla
     data object Permisos : Pantalla
     data object Privacidad : Pantalla
@@ -105,6 +118,14 @@ fun AppPaciente() {
         mutableStateOf<Pantalla>(if (avisos.debeMostrarse()) Pantalla.Aviso(primeraVez = true) else Pantalla.Inicio)
     }
     var porProgramar by remember { mutableStateOf<TratamientoGuardado?>(null) }
+    val almacenDePerfiles = remember { AlmacenDePerfiles(contexto) }
+    var perfiles by remember { mutableStateOf(almacenDePerfiles.leer()) }
+
+    /** La rutina de un perfil; la del principal está siempre a mano en [rutina]. */
+    fun rutinaDe(perfil: String): RutinaGuardada? = if (perfil.isEmpty()) rutina else AlmacenDeRutina(contexto, perfil).leer()
+
+    /** Los tratamientos del mismo perfil: la continuidad no cruza perfiles (HU-21, HU-31). */
+    fun delPerfil(perfil: String) = lista.filter { it.perfil == perfil }
     val programador = remember { ProgramadorDeAlarmas(contexto) }
     val estadosGuardados = remember { AlmacenDeEstados(contexto) }
     var estados by remember { mutableStateOf(estadosGuardados.leer()) }
@@ -131,10 +152,10 @@ fun AppPaciente() {
         val ahora = LocalDateTime.now()
         // Un tramo siguiente con la misma posología sigue la cadencia del anterior (HU-21).
         val plan = AlmacenDelPlan(contexto).leer()
-        val continuaDesde = Continuidad.detectar(t.carga, lista).mapNotNull { c ->
+        val continuaDesde = Continuidad.detectar(t.carga, delPerfil(t.perfil)).mapNotNull { c ->
             val linea = Correcciones.linea(c.productoAnterior.etiqueta, c.productoAnterior.dosis)
             val esDe = Correcciones.esDe(c.anterior)
-            val ultima = plan.filter { s -> s.lineas.any { it == linea && esDe(it, s.momento) } }.maxOfOrNull { it.momento }
+            val ultima = plan.filter { s -> s.perfil == t.perfil && s.lineas.any { it == linea && esDe(it, s.momento) } }.maxOfOrNull { it.momento }
             Continuidad.inicioDeTomas(c, ultima, ahora)?.let { c.producto.gtin to it }
         }.toMap()
         pantalla = Pantalla.Revisar(t, RevisionDelPlan(Planificacion.proponer(t, conRutina.rutina, ahora, continuaDesde)))
@@ -156,7 +177,7 @@ fun AppPaciente() {
         // Un código de reemplazo (HU-33) sustituye al tratamiento que corrige: se quitan sus
         // alarmas antes de programar las nuevas, que pueden tener el mismo texto.
         if (reemplazado != null) {
-            programador.quitarTomas(Correcciones.esDe(reemplazado))
+            programador.quitarTomas(Correcciones.esDe(reemplazado), perfil = reemplazado.perfil)
             tratamientos.quitar(reemplazado.carga.id)
             estadosGuardados.quitar(reemplazado.carga.id)
             estados = estadosGuardados.leer()
@@ -165,26 +186,34 @@ fun AppPaciente() {
         val ahora = LocalDateTime.now()
         // Con otra posología, la nueva rige desde ahora: se quitan las tomas pendientes del tramo
         // anterior de ese producto (HU-21). El historial de respuestas no se toca.
-        Continuidad.detectar(t.carga, lista.filterNot { it.carga.id == t.carga.id }).filterNot { it.mismaPosologia }.forEach { c ->
+        Continuidad.detectar(t.carga, delPerfil(t.perfil).filterNot { it.carga.id == t.carga.id }).filterNot { it.mismaPosologia }.forEach { c ->
             val linea = Correcciones.linea(c.productoAnterior.etiqueta, c.productoAnterior.dosis)
             val esDe = Correcciones.esDe(c.anterior)
-            programador.quitarTomas({ texto, momento -> texto == linea && esDe(texto, momento) }, ahora)
+            programador.quitarTomas({ texto, momento -> texto == linea && esDe(texto, momento) }, ahora, t.perfil)
         }
         val tomas = Planificacion.tomasDe(t, revision.planes)
-        val programadas = programador.programar(PlanDeAlarmas.construir(tomas, ahora), ahora)
+        val programadas = programador.programar(PlanDeAlarmas.construir(tomas, ahora, t.perfil, Perfiles.orden(perfiles, t.perfil)), ahora)
         AvisosDeRetiroEnElTelefono.programar(contexto, ahora)
         // También si quedaron programadas pero el ahorro de batería puede retrasarlas (HU-24).
         pantalla = if (programadas == 0 || !Diagnostico.del(contexto).todoEnOrden) Pantalla.Permisos else Pantalla.Inicio
     }
 
-    fun guardarRutina(guardada: RutinaGuardada) {
-        rutinas.guardar(guardada)
-        rutina = guardada
+    fun guardarRutina(guardada: RutinaGuardada, perfil: String = "") {
+        if (perfil.isEmpty()) {
+            rutinas.guardar(guardada)
+            rutina = guardada
+        } else {
+            AlmacenDeRutina(contexto, perfil).guardar(guardada)
+        }
         // La hora de acostarse cambia la del aviso de alarmas nocturnas.
         programador.reprogramarGuardadas()
         val pendiente = porProgramar
         porProgramar = null
-        if (pendiente != null) revisarPlan(pendiente, guardada) else pantalla = Pantalla.Inicio
+        if (pendiente != null) {
+            revisarPlan(pendiente, guardada)
+        } else {
+            pantalla = if (perfil.isEmpty()) Pantalla.Inicio else Pantalla.Perfiles
+        }
     }
 
     // En el aviso de la primera vez, «Atrás» cierra la aplicación: no se entra sin leerlo.
@@ -199,10 +228,12 @@ fun AppPaciente() {
     when (val p = pantalla) {
         Pantalla.Inicio -> Inicio(
             tratamientos = lista,
+            perfiles = perfiles,
+            alAbrirPerfiles = { pantalla = Pantalla.Perfiles },
             estados = estados,
             alDesactivarAlarmas = { t ->
                 // Lo confirma el paciente: la respuesta de core no va firmada (ver EstadoDeCodigo).
-                programador.quitarTomas(Correcciones.esDe(t))
+                programador.quitarTomas(Correcciones.esDe(t), perfil = t.perfil)
                 estadosGuardados.marcarAlarmasDesactivadas(t.carga.id)
                 estados = estadosGuardados.leer()
             },
@@ -224,6 +255,7 @@ fun AppPaciente() {
                 Supresion.ejecutar(contexto)
                 lista = emptyList()
                 rutina = null
+                perfiles = almacenDePerfiles.leer()
                 porProgramar = null
                 pantalla = Pantalla.Borrado
             },
@@ -249,17 +281,18 @@ fun AppPaciente() {
         is Pantalla.Confirmar -> Confirmacion(
             carga = p.lectura.carga,
             reemplaza = lista.firstOrNull { it.carga.id == p.lectura.carga.reemplazaA },
-            continuaciones = Continuidad.detectar(p.lectura.carga, lista),
-            alGuardar = {
-                val nuevo = TratamientoGuardado(p.lectura.carga, Instant.now().epochSecond, p.lectura.kid)
-                val conRutina = rutina
+            perfiles = perfiles,
+            tratamientos = lista,
+            alGuardar = { perfil ->
+                val nuevo = TratamientoGuardado(p.lectura.carga, Instant.now().epochSecond, p.lectura.kid, perfil)
+                val conRutina = rutinaDe(perfil)
                 when {
                     tratamientos.contiene(nuevo.carga.id) -> pantalla = Pantalla.YaCargado
                     conRutina == null -> {
                         // Con el primer tratamiento se pregunta la rutina (CU-P-02); el plan se
                         // revisa y se guarda al terminar la entrevista.
                         porProgramar = nuevo
-                        pantalla = Pantalla.Entrevistar(Entrevista())
+                        pantalla = Pantalla.Entrevistar(Entrevista(), perfil)
                     }
                     else -> revisarPlan(nuevo, conRutina)
                 }
@@ -280,12 +313,24 @@ fun AppPaciente() {
         )
         is Pantalla.Entrevistar -> EntrevistaDeRutina(
             inicial = p.entrevista,
-            alTerminar = { guardarRutina(RutinaGuardada(it, porDefecto = false)) },
-            alOmitir = { guardarRutina(RutinaGuardada(Rutina.POR_DEFECTO, porDefecto = true)) },
+            alTerminar = { guardarRutina(RutinaGuardada(it, porDefecto = false), p.perfil) },
+            alOmitir = { guardarRutina(RutinaGuardada(Rutina.POR_DEFECTO, porDefecto = true), p.perfil) },
+        )
+        Pantalla.Perfiles -> PantallaDePerfiles(
+            perfiles = perfiles,
+            tratamientos = lista,
+            alGuardar = { nuevos ->
+                almacenDePerfiles.guardar(nuevos)
+                perfiles = almacenDePerfiles.leer()
+            },
+            alAjustarHorarios = { perfil ->
+                pantalla = Pantalla.Entrevistar(rutinaDe(perfil)?.let { Entrevista.desde(it.rutina) } ?: Entrevista(), perfil)
+            },
+            alVolver = { pantalla = Pantalla.Inicio },
         )
         is Pantalla.Revisar -> RevisarPlan(
             inicial = p.revision,
-            rutina = rutina?.rutina ?: Rutina.POR_DEFECTO,
+            rutina = rutinaDe(p.tratamiento.perfil)?.rutina ?: Rutina.POR_DEFECTO,
             alConfirmar = { programarAlarmas(p.tratamiento, it) },
             alUsarPropuesto = { programarAlarmas(p.tratamiento, p.revision) },
         )
@@ -302,6 +347,8 @@ fun AppPaciente() {
 @Composable
 private fun Inicio(
     tratamientos: List<TratamientoGuardado>,
+    perfiles: List<Perfil>,
+    alAbrirPerfiles: () -> Unit,
     estados: Map<String, EstadoDeCodigo>,
     alDesactivarAlarmas: (TratamientoGuardado) -> Unit,
     rutina: RutinaGuardada?,
@@ -321,14 +368,21 @@ private fun Inicio(
             val hoy = LocalDate.now()
             // De cada medicamento, solo el último tramo cargado; los anteriores quedan guardados
             // con su historial (HU-21).
-            Continuidad.vigentes(tratamientos).groupBy({ it.first }, { it.second }).forEach { (t, productos) ->
-                productos.forEach { p ->
-                    TarjetaDeMedicamento(
-                        Resumen.de(p, t.carga.emitidoEn, hoy, inicio = Continuidad.inicioDeCobertura(t, p, tratamientos)),
-                        tramo = Continuidad.numeroDeTramo(t, p, tratamientos),
-                    )
+            // Con varios perfiles, los medicamentos van bajo el apodo y el color de cada uno (HU-31).
+            val vigentes = Continuidad.vigentes(tratamientos).groupBy({ it.first }, { it.second })
+            val porPerfil = vigentes.entries.groupBy { (t, _) -> t.perfil }
+            fun delMismo(t: TratamientoGuardado) = tratamientos.filter { it.perfil == t.perfil }
+            porPerfil.forEach { (perfilId, deEste) ->
+                if (perfiles.size > 1) perfiles.firstOrNull { it.id == perfilId }?.let { MarcaDePerfil(it) }
+                deEste.forEach { (t, productos) ->
+                    productos.forEach { p ->
+                        TarjetaDeMedicamento(
+                            Resumen.de(p, t.carga.emitidoEn, hoy, inicio = Continuidad.inicioDeCobertura(t, p, delMismo(t))),
+                            tramo = Continuidad.numeroDeTramo(t, p, delMismo(t)),
+                        )
+                    }
+                    EstadoDelTratamiento(t, estados[t.carga.id], alDesactivar = { alDesactivarAlarmas(t) })
                 }
-                EstadoDelTratamiento(t, estados[t.carga.id], alDesactivar = { alDesactivarAlarmas(t) })
             }
             ProximaToma(alRevisar = alRevisarPermisos)
             Text(LEYENDA, style = MaterialTheme.typography.bodySmall)
@@ -341,6 +395,9 @@ private fun Inicio(
             if (rutina.porDefecto) Text("Usamos horarios habituales. Ajústalos para que las alarmas calcen con tu día.")
         }
         TextButton(onClick = alAbrirVoz) { Text("Lectura en voz alta") }
+        TextButton(onClick = alAbrirPerfiles) {
+            Text(if (perfiles.size > 1) "Personas en este teléfono (${perfiles.size})" else "¿Cuidas a otra persona? Agrega su perfil")
+        }
         TextButton(onClick = alAbrirPrivacidad) { Text("Privacidad y mis datos") }
         TextButton(onClick = alAbrirAviso) { Text("Uso, cuándo consultar y responsabilidad") }
         if (BuildConfig.DEBUG) TextButton(onClick = alAbrirPruebas) { Text("Herramientas de prueba") }
@@ -464,13 +521,46 @@ private fun AvisoDeContinuacion(c: Continuacion) {
 private fun Confirmacion(
     carga: Carga,
     reemplaza: TratamientoGuardado?,
-    continuaciones: List<Continuacion>,
-    alGuardar: () -> Unit,
+    perfiles: List<Perfil>,
+    tratamientos: List<TratamientoGuardado>,
+    alGuardar: (String) -> Unit,
     alCancelar: () -> Unit,
 ) {
+    // Con un solo perfil no hay nada que elegir. Con dos o más, ninguno viene preseleccionado
+    // (RN-22). Un código de reemplazo va al perfil del tratamiento que corrige.
+    var elegido by remember {
+        mutableStateOf(reemplaza?.perfil ?: perfiles.singleOrNull()?.id)
+    }
+    val delPerfil = perfiles.firstOrNull { it.id == elegido }.takeIf { perfiles.size > 1 }
     Marco("Revisa tu tratamiento") {
         Text("Entregado por la farmacia ${carga.emisor}.")
-        continuaciones.forEach { c -> AvisoDeContinuacion(c) }
+        if (perfiles.size > 1 && reemplaza == null) {
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp).selectableGroup(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("¿Para quién es este tratamiento?", style = MaterialTheme.typography.titleMedium)
+                    perfiles.forEach { p ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)
+                                .selectable(selected = elegido == p.id, role = Role.RadioButton) { elegido = p.id },
+                        ) {
+                            RadioButton(selected = elegido == p.id, onClick = null)
+                            Spacer(Modifier.width(8.dp))
+                            MarcaDePerfil(p)
+                        }
+                    }
+                }
+            }
+            elegido?.let { e ->
+                Perfiles.principiosEnOtroPerfil(carga, e, tratamientos, perfiles).forEach { (principio, otro) ->
+                    Text(
+                        "Atención: ${otro.apodo} ya tiene $principio. Revisa que estés cargando en el perfil correcto.",
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
+        }
+        elegido?.let { e -> Continuidad.detectar(carga, tratamientos.filter { it.perfil == e }).forEach { c -> AvisoDeContinuacion(c) } }
         if (reemplaza != null) {
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
@@ -489,6 +579,8 @@ private fun Confirmacion(
         carga.productos.forEach { p ->
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    // El apodo y el color junto a cada medicamento (HU-31).
+                    delPerfil?.let { MarcaDePerfil(it) }
                     Text(p.etiqueta, style = MaterialTheme.typography.titleMedium)
                     Text("${p.dosis}, ${describirIntervalo(p.intervalo)}")
                     p.nota?.let { Text(it) }
@@ -496,7 +588,12 @@ private fun Confirmacion(
             }
         }
         Text(LEYENDA, style = MaterialTheme.typography.bodySmall)
-        Button(onClick = alGuardar, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) { Text("Guardar en mi teléfono") }
+        Button(
+            onClick = { elegido?.let(alGuardar) },
+            enabled = elegido != null,
+            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+        ) { Text(delPerfil?.let { "Guardar para ${it.apodo}" } ?: "Guardar en mi teléfono") }
+        if (elegido == null) Text("Elige para quién es antes de guardar.", style = MaterialTheme.typography.bodySmall)
         OutlinedButton(onClick = alCancelar, modifier = Modifier.fillMaxWidth()) { Text("No guardar") }
     }
 }
